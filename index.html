@@ -257,6 +257,7 @@ hr{border:none;border-top:1.5px solid var(--border);margin:24px 0}
           <option value="dalle">DALL-E 3 (AI)</option>
           <option value="ideogram">Ideogram (AI)</option>
           <option value="together">Together AI — FLUX (AI)</option>
+          <option value="replicate">Replicate (AI)</option>
           <option value="sdrn">Stable Diffusion (AI)</option>
         </select>
       </div>
@@ -268,6 +269,7 @@ hr{border:none;border-top:1.5px solid var(--border);margin:24px 0}
           <option value="dalle">DALL-E 3</option>
           <option value="ideogram">Ideogram</option>
           <option value="together">Together AI — FLUX</option>
+          <option value="replicate">Replicate</option>
         </select>
       </div>
     </div>
@@ -359,6 +361,7 @@ hr{border:none;border-top:1.5px solid var(--border);margin:24px 0}
           <option value="dalle">DALL-E 3 (AI)</option>
           <option value="ideogram">Ideogram (AI)</option>
           <option value="together">Together AI — FLUX (AI)</option>
+          <option value="replicate">Replicate (AI)</option>
         </select>
       </div>
     </div>
@@ -573,6 +576,8 @@ hr{border:none;border-top:1.5px solid var(--border);margin:24px 0}
         <div><label class="lbl">Ideogram key <a href="https://ideogram.ai/api" target="_blank" style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0">(get key)</a></label><input type="password" id="s-ideogram-key" placeholder="Ideogram API key"></div>
         <div><label class="lbl">Together AI key <a href="https://api.together.ai" target="_blank" style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0">(FLUX)</a></label><input type="password" id="s-together-key" placeholder="Together AI key"></div>
         <div><label class="lbl">Stability AI key <a href="https://platform.stability.ai" target="_blank" style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0">(SD)</a></label><input type="password" id="s-stability-key" placeholder="Stability key"></div>
+        <div><label class="lbl">Replicate API token <a href="https://replicate.com/account/api-tokens" target="_blank" style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0">(get token)</a></label><input type="password" id="s-replicate-key" placeholder="r8_..."></div>
+        <div><label class="lbl">Replicate model <span style="font-weight:400;text-transform:none;letter-spacing:0">(owner/model or owner/model:version)</span></label><input type="text" id="s-replicate-model" placeholder="prunaai/z-image-turbo"></div>
       </div>
     </div>
 
@@ -614,7 +619,7 @@ let S = {
   aiProvider:'claude', aiModel:'',
   claudeKey:'', openaiKey:'', grokKey:'', geminiKey:'', mistralKey:'',
   pexelsKey:'', unsplashKey:'',
-  dalleKey:'', ideogramKey:'', togetherKey:'', stabilityKey:'',
+  dalleKey:'', ideogramKey:'', togetherKey:'', stabilityKey:'', replicateKey:'', replicateModel:'prunaai/z-image-turbo',
   wpUrl:'', wpUser:'', wpPass:'',
   domains:{},        // { "yourblog.com": [{url,desc},...] }
   affiliates:[],     // [{keyword,url,label}]
@@ -682,7 +687,7 @@ function toggleDiet(el,d){el.classList.toggle('sel');if(el.classList.contains('s
 // ── AI image toggle ───────────────────────────────────────────────────────────
 function toggleImgApi(){
   const v=$('g-img-src').value;
-  $('img-style-row').style.display=['dalle','ideogram','together','sdrn'].includes(v)?'block':'none';
+  $('img-style-row').style.display=['dalle','ideogram','together','sdrn','replicate'].includes(v)?'block':'none';
 }
 
 // ── Settings ─────────────────────────────────────────────────────────────────
@@ -700,6 +705,8 @@ function loadSettingsUI(){
   $('s-ideogram-key').value= S.ideogramKey;
   $('s-together-key').value= S.togetherKey;
   $('s-stability-key').value=S.stabilityKey;
+  $('s-replicate-key').value  = S.replicateKey;
+  $('s-replicate-model').value= S.replicateModel||'prunaai/z-image-turbo';
   $('s-wp-url').value      = S.wpUrl;
   $('s-wp-user').value     = S.wpUser;
   $('s-wp-pass').value     = S.wpPass;
@@ -719,6 +726,8 @@ function saveSettings(){
   S.ideogramKey = $('s-ideogram-key').value.trim();
   S.togetherKey = $('s-together-key').value.trim();
   S.stabilityKey= $('s-stability-key').value.trim();
+  S.replicateKey  = $('s-replicate-key').value.trim();
+  S.replicateModel= $('s-replicate-model').value.trim()||'prunaai/z-image-turbo';
   S.wpUrl       = $('s-wp-url').value.trim().replace(/\/+$/,'');
   S.wpUser      = $('s-wp-user').value.trim();
   S.wpPass      = $('s-wp-pass').value.trim();
@@ -846,6 +855,48 @@ async function genAiImage(prompt, source){
     const b64=d.artifacts?.[0]?.base64;
     return b64?{url:'data:image/png;base64,'+b64,alt:prompt,credit:'Image by Stable Diffusion'}:null;
   }
+
+  if(source==='replicate'){
+    if(!S.replicateKey) return null;
+    const model=S.replicateModel||'prunaai/z-image-turbo';
+    // Split owner/model:version if version hash provided
+    const hasVersion=model.includes(':');
+    const endpoint=hasVersion
+      ? 'https://api.replicate.com/v1/predictions'
+      : `https://api.replicate.com/v1/models/${model}/predictions`;
+    const body=hasVersion
+      ? {version:model.split(':')[1],input:{prompt:fullPrompt,width:1344,height:768}}
+      : {input:{prompt:fullPrompt,width:1344,height:768}};
+    // Create prediction
+    const r=await fetch(endpoint,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.replicateKey,'Prefer':'wait=30'},
+      body:JSON.stringify(body)
+    });
+    if(!r.ok) return null;
+    const pred=await r.json();
+    // If status is already succeeded (Prefer:wait worked)
+    if(pred.status==='succeeded'){
+      const imgUrl=Array.isArray(pred.output)?pred.output[0]:pred.output;
+      return imgUrl?{url:imgUrl,alt:prompt,credit:`Image by Replicate (${model.split('/')[1]||model})`}:null;
+    }
+    // Otherwise poll
+    const pollUrl=pred.urls?.get;
+    if(!pollUrl) return null;
+    for(let i=0;i<20;i++){
+      await new Promise(res=>setTimeout(res,2000));
+      const pr=await fetch(pollUrl,{headers:{'Authorization':'Bearer '+S.replicateKey}});
+      if(!pr.ok) return null;
+      const pd=await pr.json();
+      if(pd.status==='succeeded'){
+        const imgUrl=Array.isArray(pd.output)?pd.output[0]:pd.output;
+        return imgUrl?{url:imgUrl,alt:prompt,credit:`Image by Replicate (${model.split('/')[1]||model})`}:null;
+      }
+      if(pd.status==='failed'||pd.status==='canceled') return null;
+    }
+    return null;
+  }
+
   return null;
 }
 
@@ -867,7 +918,7 @@ async function fetchUnsplash(q){
   }catch{}return null;
 }
 async function fetchImg(q,source){
-  const aiSources=['dalle','ideogram','together','sdrn'];
+  const aiSources=['dalle','ideogram','together','sdrn','replicate'];
   if(aiSources.includes(source)) return await genAiImage(q,source);
   if(source==='pexels') return (await fetchPexels(q))||(await fetchUnsplash(q));
   if(source==='unsplash') return (await fetchUnsplash(q))||(await fetchPexels(q));
