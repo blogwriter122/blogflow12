@@ -1,70 +1,76 @@
-// Vercel serverless function — proxies Replicate API to fix CORS
-// Deployed automatically at /api/replicate when hosted on Vercel
-
 export default async function handler(req, res) {
-  // Only allow POST
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    return res.status(200).end();
+  }
+
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { token, model, input, poll_url } = req.body;
+  const { token, model, input } = req.body;
 
-  if (!token) {
-    return res.status(400).json({ error: 'Missing Replicate token' });
-  }
+  if (!token) return res.status(400).json({ error: 'Missing Replicate token' });
+  if (!model) return res.status(400).json({ error: 'Missing model' });
+  if (!input)  return res.status(400).json({ error: 'Missing input' });
 
-  const headers = {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    'Prefer': 'wait=60',
-  };
+  const AUTH = `Bearer ${token}`;
 
   try {
-    // If poll_url provided, we are polling an existing prediction
-    if (poll_url) {
-      const r = await fetch(poll_url, { headers });
-      const data = await r.json();
-      return res.status(r.status).json(data);
-    }
+    // Step 1 — create prediction with Prefer:wait so fast models return immediately
+    const endpoint = model.includes(':')
+      ? 'https://api.replicate.com/v1/predictions'
+      : `https://api.replicate.com/v1/models/${model}/predictions`;
 
-    // Otherwise create a new prediction
-    // model format: "owner/name" → use /v1/models/owner/name/predictions
-    // model format: "owner/name:version" → use /v1/predictions with version field
-    let endpoint, body;
+    const body = model.includes(':')
+      ? { version: model.split(':')[1], input }
+      : { input };
 
-    if (model.includes(':')) {
-      const version = model.split(':')[1];
-      endpoint = 'https://api.replicate.com/v1/predictions';
-      body = { version, input };
-    } else {
-      endpoint = `https://api.replicate.com/v1/models/${model}/predictions`;
-      body = { input };
-    }
-
-    const r = await fetch(endpoint, {
+    const createRes = await fetch(endpoint, {
       method: 'POST',
-      headers,
+      headers: {
+        'Authorization': AUTH,
+        'Content-Type': 'application/json',
+        'Prefer': 'wait',
+      },
       body: JSON.stringify(body),
     });
 
-    const data = await r.json();
+    const prediction = await createRes.json();
 
-    // If still processing, poll until done (max 8 polls × 5s = 40s)
-    if (data.status === 'starting' || data.status === 'processing') {
-      const pollUrl = data.urls?.get;
-      if (pollUrl) {
-        for (let i = 0; i < 8; i++) {
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          const pr = await fetch(pollUrl, { headers });
-          const pd = await pr.json();
-          if (pd.status === 'succeeded' || pd.status === 'failed' || pd.status === 'canceled') {
-            return res.status(200).json(pd);
-          }
-        }
+    // Already done (Prefer:wait worked for fast models like z-image-turbo)
+    if (prediction.status === 'succeeded') {
+      return res.status(200).json(prediction);
+    }
+
+    // Step 2 — poll if still processing (slower models)
+    const pollUrl = prediction.urls?.get;
+    if (!pollUrl) {
+      return res.status(200).json(prediction);
+    }
+
+    for (let i = 0; i < 12; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      const pollRes = await fetch(pollUrl, {
+        headers: { 'Authorization': AUTH },
+      });
+      const polled = await pollRes.json();
+      if (
+        polled.status === 'succeeded' ||
+        polled.status === 'failed' ||
+        polled.status === 'canceled'
+      ) {
+        return res.status(200).json(polled);
       }
     }
 
-    return res.status(r.status).json(data);
+    // Timed out
+    return res.status(200).json({ status: 'failed', error: 'Timed out waiting for image' });
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
