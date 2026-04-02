@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog Engine v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0f0f0f;--ink2:#3d3d3d;--ink3:#888;
+  --paper:#fafaf7;--surface:#f3f3ef;--surface2:#e9e9e4;--border:#ddddd5;
+  --accent:#1a6b3c;--accent-bg:#e8f5ee;--accent-light:#d0eddb;
+  --warn:#b84c00;--warn-bg:#fff3ec;--warn-border:#f5c6a8;
+  --info-bg:#eff4ff;--info:#2d4ecf;--info-border:#b8c9f8;
+  --r:10px;--font-h:'DM Serif Display',Georgia,serif;
+  --font-b:'DM Sans',sans-serif;--font-m:'DM Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-b);background:var(--paper);color:var(--ink);min-height:100vh;font-size:15px;line-height:1.6}
+/* ── Shell ── */
+.shell{display:flex;min-height:100vh}
+.sidebar{width:224px;flex-shrink:0;background:#111;color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto}
+.sb-logo{padding:26px 22px 18px;border-bottom:1px solid #222}
+.sb-logo h1{font-family:var(--font-h);font-size:1.25rem;color:#fff;line-height:1.2}
+.sb-logo small{font-size:10.5px;color:#666;letter-spacing:.05em;text-transform:uppercase;display:block;margin-top:2px}
+.sb-badge{display:inline-block;background:#1a6b3c;color:#fff;font-size:9px;font-weight:700;letter-spacing:.05em;padding:1px 6px;border-radius:20px;margin-left:6px;vertical-align:middle}
+nav{padding:12px 0;flex:1}
+.nav-i{display:flex;align-items:center;gap:9px;padding:9px 22px;cursor:pointer;color:#999;font-size:13px;font-weight:400;transition:all .15s;border-left:3px solid transparent;user-select:none}
+.nav-i:hover{color:#fff;background:#1a1a1a}
+.nav-i.active{color:#fff;background:#1c1c1c;border-left-color:var(--accent)}
+.nav-i svg{flex-shrink:0;opacity:.55}
+.nav-i.active svg{opacity:1}
+.sb-foot{padding:14px 22px;border-top:1px solid #222;font-size:10.5px;color:#555;line-height:1.5}
+.main{margin-left:224px;flex:1;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--paper);border-bottom:1px solid var(--border);padding:0 36px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-t{font-family:var(--font-h);font-size:1.05rem}
+.topbar-r{display:flex;align-items:center;gap:16px}
+.api-pill{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink3);background:var(--surface);border:0.5px solid var(--border);padding:4px 10px;border-radius:20px;cursor:pointer}
+.api-pill .dot{width:6px;height:6px;border-radius:50%;background:#ccc;flex-shrink:0}
+.api-pill .dot.on{background:var(--accent)}
+.content{padding:32px 36px;max-width:920px}
+/* ── Pages ── */
+.page{display:none}
+.page.active{display:block;animation:fadeUp .22s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* ── Typography ── */
+.sh{font-family:var(--font-h);font-size:1.4rem;margin-bottom:3px}
+.ss{color:var(--ink3);font-size:13px;margin-bottom:22px}
+.lbl{display:block;font-size:11px;font-weight:600;letter-spacing:.055em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+/* ── Grid ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px}
+/* ── Form elements ── */
+input[type=text],input[type=password],input[type=number],input[type=url],input[type=email],textarea,select{
+  width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--r);
+  font-family:var(--font-b);font-size:13.5px;color:var(--ink);background:#fff;
+  transition:border-color .15s;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:80px;font-size:13px;line-height:1.55}
+.range-row{display:flex;align-items:center;gap:10px}
+input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer}
+.rv{min-width:46px;text-align:right;font-size:13px;font-weight:500}
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r);font-family:var(--font-b);font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid transparent;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-p:hover{background:#155c32}
+.btn-s{background:#fff;color:var(--ink);border-color:var(--border)}
+.btn-s:hover{background:var(--surface)}
+.btn-d{background:#fff;color:var(--warn);border-color:var(--warn-border)}
+.btn-d:hover{background:var(--warn-bg)}
+.btn-g{background:transparent;color:var(--ink2);border-color:transparent}
+.btn-g:hover{background:var(--surface)}
+.btn-lg{padding:11px 26px;font-size:14.5px}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+.brow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+/* ── Cards ── */
+.card{background:#fff;border:1.5px solid var(--border);border-radius:var(--r);padding:18px 22px;margin-bottom:14px}
+.card-t{font-family:var(--font-h);font-size:1rem;margin-bottom:3px}
+.card-s{font-size:12.5px;color:var(--ink3);margin-bottom:12px}
+/* ── Alerts ── */
+.alert{padding:11px 15px;border-radius:var(--r);font-size:13px;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px;line-height:1.5}
+.al-w{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-border)}
+.al-s{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-light)}
+.al-i{background:var(--info-bg);color:var(--info);border:1px solid var(--info-border)}
+/* ── Tabs ── */
+.tabs{display:flex;gap:0;border-bottom:1.5px solid var(--border);margin-bottom:22px;overflow-x:auto}
+.tab{padding:8px 16px;font-size:13px;font-weight:500;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1.5px;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tp{display:none}
+.tp.active{display:block}
+/* ── Progress ── */
+.prog-wrap{background:var(--surface2);border-radius:20px;height:5px;overflow:hidden;margin:10px 0 4px}
+.prog-bar{height:100%;background:var(--accent);border-radius:20px;transition:width .35s ease;width:0%}
+.prog-lbl{font-size:12px;color:var(--ink3);margin-top:3px}
+/* ── Code ── */
+.code-wrap{position:relative;background:#161616;border-radius:var(--r);overflow:hidden;margin-bottom:12px}
+.code-wrap pre{font-family:var(--font-m);font-size:12px;color:#d4d4d4;padding:14px 16px;overflow:auto;max-height:400px;white-space:pre-wrap;word-break:break-all}
+.code-copy{position:absolute;top:8px;right:8px;background:#2a2a2a;color:#bbb;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:var(--font-b);transition:all .15s}
+.code-copy:hover{background:#3a3a3a;color:#fff}
+/* ── Preview ── */
+.prev-wrap{border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden;background:#fff}
+.prev-wrap iframe{width:100%;border:none;display:block}
+/* ── Niche tags ── */
+.tag-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.ntag{padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);font-size:12.5px;cursor:pointer;transition:all .15s;background:#fff;color:var(--ink2);user-select:none}
+.ntag:hover{border-color:var(--accent);color:var(--accent)}
+.ntag.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* ── Badge ── */
+.bdg{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600}
+.bdg-g{background:var(--accent-bg);color:var(--accent)}
+.bdg-gr{background:var(--surface2);color:var(--ink3)}
+.bdg-w{background:var(--warn-bg);color:var(--warn)}
+/* ── Link rows ── */
+.lrow{display:grid;grid-template-columns:1fr 2fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--surface2);font-size:13px}
+.lrow:last-child{border-bottom:none}
+.lurl{font-family:var(--font-m);font-size:11.5px;color:var(--accent);word-break:break-all}
+/* ── Domain pill ── */
+.dom-pill{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);margin-bottom:8px;cursor:pointer;transition:all .15s}
+.dom-pill:hover,.dom-pill.sel{border-color:var(--accent);background:var(--accent-bg)}
+.dom-pill.sel .dom-name{color:var(--accent);font-weight:600}
+.dom-name{font-size:13.5px;font-weight:500}
+.dom-count{font-size:11.5px;color:var(--ink3)}
+/* ── Divider ── */
+hr{border:none;border-top:1.5px solid var(--border);margin:24px 0}
+/* ── Spinner ── */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .65s linear infinite;display:inline-block;flex-shrink:0}
+/* ── Check ── */
+.chk{display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer;margin-bottom:6px}
+.chk input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+/* ── Responsive ── */
+@media(max-width:680px){
+  .sidebar{display:none}.main{margin-left:0}.content{padding:18px 14px}
+  .g2,.g3,.g4{grid-template-columns:1fr}
+}
+/* ── Print (recipe card) ── */
+@media print{
+  .no-print{display:none!important}
+  .print-only{display:block!important}
+  body{margin:0}
+  .recipe-print-card{page-break-inside:avoid}
+}
+.print-only{display:none}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sb-logo">
+    <h1>Blog Engine <span class="sb-badge">v2</span></h1>
+    <small>AI Content Studio</small>
+  </div>
+  <nav>
+    <div class="nav-i active" data-page="gen" onclick="goPage(this)">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Generate blog
+    </div>
+    <div class="nav-i" data-page="recipe" onclick="goPage(this)">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 4-3 6-4 9H9c-1-3-4-5-4-9a7 7 0 017-7z"/><path d="M9 18h6M10 22h4"/></svg>
+      Recipe mode
+    </div>
+    <div class="nav-i" data-page="links" onclick="goPage(this)">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+      Link library
+    </div>
+    <div class="nav-i" data-page="queue" onclick="goPage(this)">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Bulk queue
+    </div>
+    <div class="nav-i" data-page="prompts" onclick="goPage(this)">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Master prompts
+    </div>
+    <div class="nav-i" data-page="settings" onclick="goPage(this)">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </div>
+  </nav>
+  <div class="sb-foot">Keys saved in your browser only<br>No server. No tracking.</div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <span class="topbar-t" id="topbar-t">Generate blog</span>
+    <div class="topbar-r">
+      <div class="api-pill" onclick="goPage(document.querySelector('[data-page=settings]'))">
+        <span class="dot" id="ai-dot"></span>
+        <span id="ai-lbl">No AI key</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+  <!-- ══════════════════════════════════════
+       PAGE: GENERATE BLOG
+  ══════════════════════════════════════ -->
+  <div class="page active" id="page-gen">
+    <div id="gen-warn" class="alert al-w" style="display:none">⚠️ Add an AI API key in <strong>Settings</strong> first.</div>
+
+    <!-- Title -->
+    <div style="margin-bottom:16px">
+      <label class="lbl">Blog title</label>
+      <input type="text" id="g-title" placeholder="e.g. 10 Best High-Protein Breakfasts for Busy Mornings" style="font-size:15px;padding:11px 14px">
+    </div>
+
+    <!-- Niche -->
+    <div style="margin-bottom:16px">
+      <label class="lbl">Niche / category</label>
+      <div class="tag-grid" id="niche-grid"></div>
+    </div>
+
+    <!-- Domain selector -->
+    <div style="margin-bottom:16px">
+      <label class="lbl">Internal links — domain</label>
+      <select id="g-domain" style="max-width:320px">
+        <option value="">— none / skip internal links —</option>
+      </select>
+      <div style="font-size:11.5px;color:var(--ink3);margin-top:4px" id="g-domain-count"></div>
+    </div>
+
+    <!-- Settings row -->
+    <div class="g3" style="margin-bottom:16px">
+      <div>
+        <label class="lbl">Word count</label>
+        <div class="range-row">
+          <input type="range" id="g-wc" min="800" max="3500" step="100" value="1500" oninput="$('g-wc-v').textContent=this.value">
+          <span class="rv" id="g-wc-v">1500</span>
+        </div>
+      </div>
+      <div>
+        <label class="lbl">H2 sections</label>
+        <div class="range-row">
+          <input type="range" id="g-h2" min="3" max="12" step="1" value="5" oninput="$('g-h2-v').textContent=this.value">
+          <span class="rv" id="g-h2-v">5</span>
+        </div>
+      </div>
+      <div>
+        <label class="lbl">Tone</label>
+        <select id="g-tone">
+          <option>Friendly</option><option>Professional</option><option>Casual</option>
+          <option>Formal</option><option>Expert</option><option>Beginner-friendly</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Image row -->
+    <div class="g2" style="margin-bottom:16px">
+      <div>
+        <label class="lbl">Image source</label>
+        <select id="g-img-src" onchange="toggleImgApi()">
+          <option value="none">No images</option>
+          <option value="pexels">Pexels (stock)</option>
+          <option value="unsplash">Unsplash (stock)</option>
+          <option value="dalle">DALL-E 3 (AI)</option>
+          <option value="ideogram">Ideogram (AI)</option>
+          <option value="together">Together AI — FLUX (AI)</option>
+          <option value="replicate">Replicate (AI)</option>
+          <option value="sdrn">Stable Diffusion (AI)</option>
+        </select>
+      </div>
+      <div>
+        <label class="lbl">Feature image</label>
+        <select id="g-feat">
+          <option value="none">None</option>
+          <option value="same">Same source as H2 images</option>
+          <option value="dalle">DALL-E 3</option>
+          <option value="ideogram">Ideogram</option>
+          <option value="together">Together AI — FLUX</option>
+          <option value="replicate">Replicate</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- AI image prompt style (shown only for AI sources) -->
+    <div id="img-style-row" style="display:none;margin-bottom:16px">
+      <label class="lbl">Image style prompt suffix</label>
+      <input type="text" id="g-img-style" value="photorealistic, high quality, sharp focus, professional photography" placeholder="photorealistic, high quality...">
+    </div>
+
+    <!-- Affiliate -->
+    <div style="margin-bottom:16px">
+      <label class="chk">
+        <input type="checkbox" id="g-use-aff" checked>
+        Use affiliate links <span class="bdg bdg-gr" id="g-aff-count">0</span>
+      </label>
+    </div>
+
+    <!-- Extra -->
+    <div style="margin-bottom:18px">
+      <label class="lbl">Extra instructions <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+      <textarea id="g-extra" placeholder="e.g. Include a product comparison table, focus on beginners, avoid mentioning competitor X..."></textarea>
+    </div>
+
+    <div class="brow">
+      <button class="btn btn-s" onclick="previewOutline()">👁 Preview outline</button>
+      <button class="btn btn-p btn-lg" id="g-btn" onclick="generateBlog()">✍ Generate full blog post</button>
+    </div>
+
+    <!-- Progress -->
+    <div id="g-prog" style="display:none;margin-top:18px">
+      <div class="prog-wrap"><div class="prog-bar" id="g-prog-bar"></div></div>
+      <div class="prog-lbl" id="g-prog-lbl">Starting...</div>
+    </div>
+
+    <!-- Outline -->
+    <div id="outline-box" style="display:none;margin-top:20px">
+      <div class="card"><div class="card-t">Proposed outline</div><div class="card-s">Approve then click Generate</div><div id="outline-list"></div></div>
+    </div>
+
+    <!-- Output -->
+    <div id="g-out" style="display:none;margin-top:28px">
+      <hr>
+      <h2 class="sh" id="g-out-title">Generated post</h2>
+      <div class="tabs">
+        <div class="tab active" onclick="stab(this,'gp-prev')">Preview</div>
+        <div class="tab" onclick="stab(this,'gp-html')">HTML code</div>
+        <div class="tab" onclick="stab(this,'gp-export')">Export &amp; Publish</div>
+      </div>
+      <div class="tp active" id="gp-prev">
+        <div class="prev-wrap"><iframe id="g-iframe" style="height:680px"></iframe></div>
+      </div>
+      <div class="tp" id="gp-html">
+        <div class="code-wrap">
+          <button class="code-copy" onclick="copyEl('g-code')">Copy</button>
+          <pre id="g-code"></pre>
+        </div>
+      </div>
+      <div class="tp" id="gp-export">
+        <div class="brow" style="margin-bottom:16px">
+          <button class="btn btn-s" onclick="dlBlog('html')">⬇ Download HTML</button>
+          <button class="btn btn-s" onclick="dlBlog('txt')">⬇ Download text</button>
+          <button class="btn btn-s" onclick="copyHtml()">📋 Copy HTML</button>
+        </div>
+        <hr>
+        <h3 style="font-family:var(--font-h);font-size:1.05rem;margin-bottom:14px">Publish to WordPress</h3>
+        <div id="g-wp"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PAGE: RECIPE
+  ══════════════════════════════════════ -->
+  <div class="page" id="page-recipe">
+    <div id="rec-warn" class="alert al-w" style="display:none">⚠️ Add an AI API key in Settings first.</div>
+
+    <div class="g2" style="margin-bottom:14px">
+      <div>
+        <label class="lbl">Recipe name</label>
+        <input type="text" id="r-name" placeholder="e.g. Creamy Tuscan Garlic Salmon" style="font-size:15px;padding:10px 13px">
+      </div>
+      <div>
+        <label class="lbl">Image source</label>
+        <select id="r-img">
+          <option value="none">No image</option>
+          <option value="pexels" selected>Pexels</option>
+          <option value="unsplash">Unsplash</option>
+          <option value="dalle">DALL-E 3 (AI)</option>
+          <option value="ideogram">Ideogram (AI)</option>
+          <option value="together">Together AI — FLUX (AI)</option>
+          <option value="replicate">Replicate (AI)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="g3" style="margin-bottom:14px">
+      <div><label class="lbl">Servings</label><input type="number" id="r-serv" value="4" min="1" max="100"></div>
+      <div><label class="lbl">Difficulty</label>
+        <select id="r-diff"><option>Easy</option><option>Medium</option><option>Hard</option><option>Professional</option></select></div>
+      <div><label class="lbl">Cuisine</label><input type="text" id="r-cuisine" placeholder="Italian, Thai, Mexican..."></div>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label class="lbl">Dietary tags</label>
+      <div class="tag-grid" id="diet-grid"></div>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label class="lbl">Extra notes</label>
+      <textarea id="r-extra" placeholder="e.g. Make it spicy, include wine pairing, use US measurements..."></textarea>
+    </div>
+
+    <div style="margin-bottom:8px">
+      <label class="lbl">Custom recipe master prompt <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — overrides default)</span></label>
+      <textarea id="r-masterprompt" placeholder="Leave blank to use the default recipe prompt from Master Prompts page..." style="min-height:60px"></textarea>
+    </div>
+
+    <button class="btn btn-p btn-lg" onclick="generateRecipe()">🍳 Generate recipe</button>
+
+    <div id="r-prog" style="display:none;margin-top:16px">
+      <div class="prog-wrap"><div class="prog-bar" id="r-prog-bar"></div></div>
+      <div class="prog-lbl" id="r-prog-lbl">Creating recipe...</div>
+    </div>
+
+    <div id="r-out" style="display:none;margin-top:26px">
+      <hr>
+      <h2 class="sh" id="r-out-title">Recipe</h2>
+      <div class="tabs">
+        <div class="tab active" onclick="stab(this,'rp-prev')">Recipe card</div>
+        <div class="tab" onclick="stab(this,'rp-html')">HTML</div>
+        <div class="tab" onclick="stab(this,'rp-schema')">JSON-LD schema</div>
+        <div class="tab" onclick="stab(this,'rp-pub')">Publish</div>
+      </div>
+      <div class="tp active" id="rp-prev">
+        <div class="brow" style="margin-bottom:12px">
+          <button class="btn btn-s" onclick="printRecipe()">🖨 Print recipe card</button>
+          <button class="btn btn-s" onclick="copyEl('r-code')">📋 Copy HTML</button>
+        </div>
+        <div class="prev-wrap"><iframe id="r-iframe" style="height:900px"></iframe></div>
+      </div>
+      <div class="tp" id="rp-html">
+        <div class="code-wrap">
+          <button class="code-copy" onclick="copyEl('r-code')">Copy</button>
+          <pre id="r-code"></pre>
+        </div>
+        <div class="brow" style="margin-top:10px">
+          <button class="btn btn-s" onclick="dlRecipe()">⬇ Download HTML</button>
+        </div>
+      </div>
+      <div class="tp" id="rp-schema">
+        <div class="alert al-i">Paste inside <code>&lt;script type="application/ld+json"&gt;</code> in your page <code>&lt;head&gt;</code>.</div>
+        <div class="code-wrap">
+          <button class="code-copy" onclick="copyEl('r-schema-code')">Copy</button>
+          <pre id="r-schema-code"></pre>
+        </div>
+      </div>
+      <div class="tp" id="rp-pub"><div id="r-wp"></div></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PAGE: LINK LIBRARY
+  ══════════════════════════════════════ -->
+  <div class="page" id="page-links">
+    <div class="tabs">
+      <div class="tab active" onclick="stab(this,'lt-int')">Internal links</div>
+      <div class="tab" onclick="stab(this,'lt-aff')">Affiliate links</div>
+    </div>
+
+    <!-- Internal -->
+    <div class="tp active" id="lt-int">
+      <!-- Add domain -->
+      <div class="card">
+        <div class="card-t">Manage domains</div>
+        <div class="card-s">Add each site you own. Then bulk-paste URLs under that domain.</div>
+        <div class="g2" style="margin-bottom:10px">
+          <div><label class="lbl">Domain</label><input type="text" id="new-dom" placeholder="yourblog.com"></div>
+          <div style="display:flex;align-items:flex-end"><button class="btn btn-p" onclick="addDomain()" style="width:100%">+ Add domain</button></div>
+        </div>
+        <div id="dom-list"></div>
+      </div>
+
+      <!-- Add URLs to domain -->
+      <div class="card" id="url-add-card" style="display:none">
+        <div class="card-t">Add URLs to: <span id="active-dom-lbl" style="color:var(--accent)"></span></div>
+        <div class="card-s">Paste one URL per line with optional description after a pipe ( | )</div>
+        <label class="lbl" style="margin-top:8px">Bulk paste URLs</label>
+        <textarea id="bulk-urls" placeholder="https://yourblog.com/post-one | guide to SEO&#10;https://yourblog.com/post-two | best protein powders&#10;https://yourblog.com/post-three" style="min-height:120px;font-family:var(--font-m);font-size:12px"></textarea>
+        <div class="brow" style="margin-top:8px">
+          <button class="btn btn-p" onclick="bulkAddUrls()">+ Add all URLs</button>
+          <span style="font-size:12px;color:var(--ink3);align-self:center">Tip: if no pipe ( | ) the URL path is used as description</span>
+        </div>
+      </div>
+
+      <!-- URL list for selected domain -->
+      <div id="url-list-wrap" style="display:none">
+        <div class="card" style="padding:10px 18px"><div id="url-list"></div></div>
+      </div>
+    </div>
+
+    <!-- Affiliate -->
+    <div class="tp" id="lt-aff">
+      <div class="card">
+        <div class="card-t">Bulk add affiliate links</div>
+        <div class="card-s">Paste one per line: <code>keyword | affiliate_url | label</code> (label optional)</div>
+        <textarea id="bulk-aff" placeholder="protein powder | https://amzn.to/xyz | Best protein powder&#10;yoga mat | https://amzn.to/abc | Top-rated yoga mat&#10;running shoes | https://amzn.to/def" style="min-height:130px;font-family:var(--font-m);font-size:12px"></textarea>
+        <div class="brow" style="margin-top:8px">
+          <button class="btn btn-p" onclick="bulkAddAff()">+ Add all affiliate links</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-t">Single add</div>
+        <div class="g3" style="margin-bottom:10px">
+          <div><label class="lbl">Keyword</label><input type="text" id="aff-kw" placeholder="protein powder"></div>
+          <div><label class="lbl">Affiliate URL</label><input type="url" id="aff-url" placeholder="https://amzn.to/..."></div>
+          <div><label class="lbl">Link label</label><input type="text" id="aff-lbl" placeholder="Best protein powder"></div>
+        </div>
+        <button class="btn btn-p" onclick="addAff()">+ Add</button>
+      </div>
+      <div id="aff-list-wrap">
+        <div style="margin-bottom:8px;font-size:13px;color:var(--ink3)" id="aff-count-lbl"></div>
+        <div class="card" style="padding:10px 18px" id="aff-list-card" style="display:none"><div id="aff-list"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PAGE: MASTER PROMPTS
+  ══════════════════════════════════════ -->
+  <div class="page" id="page-prompts">
+    <p class="ss">Customise the system prompt for each niche. The AI will follow these instructions when writing in that niche.</p>
+    <div style="margin-bottom:14px">
+      <label class="lbl">Select niche to edit</label>
+      <select id="prompt-niche-sel" onchange="loadPromptEditor()" style="max-width:280px"></select>
+    </div>
+    <div>
+      <label class="lbl">Master prompt</label>
+      <textarea id="prompt-editor" style="min-height:220px;font-size:13px"></textarea>
+    </div>
+    <div class="brow" style="margin-top:10px">
+      <button class="btn btn-p" onclick="savePrompt()">💾 Save prompt</button>
+      <button class="btn btn-s" onclick="resetPrompt()">↺ Reset to default</button>
+    </div>
+    <div id="prompt-saved" class="alert al-s" style="display:none;margin-top:10px">Prompt saved!</div>
+
+    <hr>
+    <h3 style="font-family:var(--font-h);font-size:1.05rem;margin-bottom:6px">Image style prompt per niche</h3>
+    <p style="font-size:13px;color:var(--ink3);margin-bottom:12px">This is appended to every image query for this niche. Make it specific — e.g. "appetizing food photography, overhead shot, natural light" gives much better results than a generic prompt.</p>
+    <div style="margin-bottom:14px">
+      <label class="lbl">Select niche to edit image prompt</label>
+      <select id="img-prompt-niche-sel" onchange="loadImgPromptEditor()" style="max-width:280px"></select>
+    </div>
+    <div>
+      <label class="lbl">Image style prompt</label>
+      <textarea id="img-prompt-editor" style="min-height:80px;font-size:13px" placeholder="e.g. appetizing food photography, natural light, overhead flat lay, vibrant fresh ingredients"></textarea>
+    </div>
+    <div class="brow" style="margin-top:10px">
+      <button class="btn btn-p" onclick="saveImgPrompt()">💾 Save image prompt</button>
+      <button class="btn btn-s" onclick="resetImgPrompt()">↺ Reset to default</button>
+    </div>
+    <div id="img-prompt-saved" class="alert al-s" style="display:none;margin-top:10px">Image prompt saved!</div>
+
+    <hr>
+    <h3 style="font-family:var(--font-h);font-size:1.05rem;margin-bottom:6px">Recipe master prompt</h3>
+    <p style="font-size:13px;color:var(--ink3);margin-bottom:10px">Used for all recipe generation unless overridden on the Recipe page.</p>
+    <textarea id="rec-master-prompt" style="min-height:160px;font-size:13px"></textarea>
+    <div class="brow" style="margin-top:10px">
+      <button class="btn btn-p" onclick="saveRecipePrompt()">💾 Save recipe prompt</button>
+      <button class="btn btn-s" onclick="resetRecipePrompt()">↺ Reset to default</button>
+    </div>
+    <div id="rec-prompt-saved" class="alert al-s" style="display:none;margin-top:10px">Recipe prompt saved!</div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PAGE: SETTINGS
+  ══════════════════════════════════════ -->
+  <div class="page" id="page-settings">
+
+    <!-- AI providers -->
+    <div class="card">
+      <div class="card-t">AI writing engine</div>
+      <div class="card-s">Add keys for any providers you want to use. Select the active one below.</div>
+      <div class="g2" style="margin-bottom:12px">
+        <div><label class="lbl">Active provider</label>
+          <select id="s-ai-provider" onchange="saveSettings()">
+            <option value="claude">Anthropic — Claude</option>
+            <option value="openai">OpenAI — GPT-4o</option>
+            <option value="grok">xAI — Grok</option>
+            <option value="gemini">Google — Gemini</option>
+            <option value="mistral">Mistral</option>
+          </select>
+        </div>
+        <div><label class="lbl">Model name (optional override)</label>
+          <input type="text" id="s-ai-model" placeholder="e.g. claude-opus-4-5, gpt-4o, grok-3...">
+        </div>
+      </div>
+      <div class="g2">
+        <div><label class="lbl">Anthropic key</label><input type="password" id="s-claude-key" placeholder="sk-ant-..."></div>
+        <div><label class="lbl">OpenAI key</label><input type="password" id="s-openai-key" placeholder="sk-..."></div>
+        <div><label class="lbl">xAI (Grok) key</label><input type="password" id="s-grok-key" placeholder="xai-..."></div>
+        <div><label class="lbl">Google Gemini key</label><input type="password" id="s-gemini-key" placeholder="AIza..."></div>
+        <div><label class="lbl">Mistral key</label><input type="password" id="s-mistral-key" placeholder="..."></div>
+      </div>
+    </div>
+
+    <!-- Stock images -->
+    <div class="card">
+      <div class="card-t">Stock image APIs</div>
+      <div class="g2">
+        <div><label class="lbl">Pexels key <a href="https://pexels.com/api" target="_blank" style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0">(get free)</a></label><input type="password" id="s-pexels" placeholder="Pexels key"></div>
+        <div><label class="lbl">Unsplash key <a href="https://unsplash.com/developers" target="_blank" style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0">(get free)</a></label><input type="password" id="s-unsplash" placeholder="Unsplash access key"></div>
+      </div>
+    </div>
+
+    <!-- AI image APIs -->
+    <div class="card">
+      <div class="card-t">AI image generation APIs</div>
+      <div class="g2">
+        <div><label class="lbl">OpenAI key (DALL-E 3)</label><input type="password" id="s-dalle-key" placeholder="sk- (same as OpenAI writing key)"></div>
+        <div><label class="lbl">Ideogram key <a href="https://ideogram.ai/api" target="_blank" style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0">(get key)</a></label><input type="password" id="s-ideogram-key" placeholder="Ideogram API key"></div>
+        <div><label class="lbl">Together AI key <a href="https://api.together.ai" target="_blank" style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0">(FLUX)</a></label><input type="password" id="s-together-key" placeholder="Together AI key"></div>
+        <div><label class="lbl">Stability AI key <a href="https://platform.stability.ai" target="_blank" style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0">(SD)</a></label><input type="password" id="s-stability-key" placeholder="Stability key"></div>
+        <div><label class="lbl">Replicate API token <a href="https://replicate.com/account/api-tokens" target="_blank" style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0">(get token)</a></label><input type="password" id="s-replicate-key" placeholder="r8_..."></div>
+        <div><label class="lbl">Replicate model <span style="font-weight:400;text-transform:none;letter-spacing:0">(owner/model or owner/model:version)</span></label><input type="text" id="s-replicate-model" placeholder="prunaai/z-image-turbo"></div>
+        <div>
+          <label class="lbl">Target resolution <span style="font-weight:400;text-transform:none;letter-spacing:0">— higher = better quality + higher cost</span></label>
+          <select id="s-replicate-res">
+            <option value="0.5">0.5 — $2.50 / 1000 megapixels (cheapest)</option>
+            <option value="1">1 — $5.00 / 1000 megapixels</option>
+            <option value="2" selected>2 — $0.01 / megapixel (~$0.01/image)</option>
+            <option value="3">3 — $0.015 / megapixel</option>
+            <option value="4">4 — $0.02 / megapixel (best quality)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- WordPress -->
+    <div class="card">
+      <div class="card-t">WordPress publisher</div>
+      <div class="card-s">WP Admin → Users → Profile → Application Passwords → create one.</div>
+      <div class="g3">
+        <div><label class="lbl">Site URL</label><input type="url" id="s-wp-url" placeholder="https://yoursite.com"></div>
+        <div><label class="lbl">Username</label><input type="text" id="s-wp-user" placeholder="admin"></div>
+        <div><label class="lbl">Application password</label><input type="password" id="s-wp-pass" placeholder="xxxx xxxx xxxx xxxx"></div>
+      </div>
+    </div>
+
+    <button class="btn btn-p btn-lg" onclick="saveSettings()">💾 Save all settings</button>
+    <div id="s-saved" class="alert al-s" style="display:none;margin-top:12px">✓ Settings saved!</div>
+
+    <hr>
+    <h3 style="font-family:var(--font-h);font-size:1rem;margin-bottom:12px">Status</h3>
+    <div class="g4">
+      <div class="card" style="padding:12px 14px;text-align:center"><div class="lbl" style="margin-bottom:4px">Claude</div><div id="st-claude" class="bdg bdg-gr">not set</div></div>
+      <div class="card" style="padding:12px 14px;text-align:center"><div class="lbl" style="margin-bottom:4px">OpenAI</div><div id="st-openai" class="bdg bdg-gr">not set</div></div>
+      <div class="card" style="padding:12px 14px;text-align:center"><div class="lbl" style="margin-bottom:4px">Pexels</div><div id="st-pexels" class="bdg bdg-gr">not set</div></div>
+      <div class="card" style="padding:12px 14px;text-align:center"><div class="lbl" style="margin-bottom:4px">WordPress</div><div id="st-wp" class="bdg bdg-gr">not set</div></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PAGE: BULK QUEUE
+  ══════════════════════════════════════ -->
+  <div class="page" id="page-queue">
+    <p class="ss">Paste multiple blog titles — one per line. The engine writes each one fully with your current settings (niche, links, images). Download all as a ZIP when done.</p>
+
+    <div class="card">
+      <div class="card-t">Paste titles</div>
+      <div class="card-s" style="margin-bottom:10px">One title per line. Max 50 at a time.</div>
+      <textarea id="q-titles" style="min-height:160px;font-family:var(--font-m);font-size:13px" placeholder="10 Low Calorie Breakfast Ideas&#10;Best Protein Sources for Weight Loss&#10;How to Meal Prep for the Week&#10;Easy Healthy Lunch Ideas for Work&#10;..."></textarea>
+
+      <div class="g3" style="margin-top:14px">
+        <div>
+          <label class="lbl">Niche for all</label>
+          <select id="q-niche"></select>
+        </div>
+        <div>
+          <label class="lbl">Domain for links</label>
+          <select id="q-domain">
+            <option value="">— none —</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Image source</label>
+          <select id="q-img">
+            <option value="none">No images</option>
+            <option value="pexels" selected>Pexels</option>
+            <option value="unsplash">Unsplash</option>
+            <option value="replicate">Replicate (AI)</option>
+            <option value="dalle">DALL-E 3</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="brow" style="margin-top:14px">
+        <button class="btn btn-p btn-lg" id="q-start-btn" onclick="startQueue()">▶ Start queue</button>
+        <button class="btn btn-s" id="q-stop-btn" onclick="stopQueue()" style="display:none">⏹ Stop</button>
+        <button class="btn btn-s" id="q-dl-btn" onclick="downloadQueueZip()" style="display:none">⬇ Download all as ZIP</button>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div id="q-progress-wrap" style="display:none;margin-top:4px">
+      <div class="prog-wrap"><div class="prog-bar" id="q-prog-bar"></div></div>
+      <div class="prog-lbl" id="q-prog-lbl"></div>
+    </div>
+
+    <!-- Results table -->
+    <div id="q-results" style="display:none;margin-top:20px">
+      <div class="card" style="padding:10px 18px">
+        <div id="q-results-list"></div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /content -->
+</main>
+</div><!-- /shell -->
+
+<script>
+// ── Utilities ────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const SS = { g: k=>{ try{return JSON.parse(localStorage.getItem(k))}catch{return null} }, s:(k,v)=>localStorage.setItem(k,JSON.stringify(v)) };
+
+// ── State ────────────────────────────────────────────────────────────────────
+let S = {
+  aiProvider:'claude', aiModel:'',
+  claudeKey:'', openaiKey:'', grokKey:'', geminiKey:'', mistralKey:'',
+  pexelsKey:'', unsplashKey:'',
+  dalleKey:'', ideogramKey:'', togetherKey:'', stabilityKey:'', replicateKey:'', replicateModel:'prunaai/z-image-turbo', replicateRes:'2',
+  wpUrl:'', wpUser:'', wpPass:'',
+  domains:{},        // { "yourblog.com": [{url,desc},...] }
+  affiliates:[],     // [{keyword,url,label}]
+  customPrompts:{},       // { niche: promptStr }
+  customImagePrompts:{},  // { niche: imagePromptStr }
+  recipePrompt:'',
+  lastBlogHtml:'', lastBlogTitle:'',
+  lastRecipeHtml:'', lastRecipeSchema:'', lastRecipeName:'',
+};
+function loadS(){ const d=SS.g('be_v2'); if(d) Object.assign(S,d); }
+function saveS(){ SS.s('be_v2',S); }
+
+// ── Niches ───────────────────────────────────────────────────────────────────
+const NICHES=['Food & Cooking','Travel','Finance','Health & Fitness','Technology','Lifestyle','Parenting','Beauty & Fashion','Hairstyle & Hair Care','Nail Art','Home Decor','Garden & Outdoors','Business','DIY & Crafts','Pet Care','General'];
+const DIETARY=['Vegetarian','Vegan','Gluten-free','Dairy-free','Keto','Low-carb','Paleo','Halal','Nut-free','High-protein'];
+let selNiche='General', selDietary=[];
+
+const DEFAULT_PROMPTS = {
+  'Food & Cooking':'You are an expert food blogger. Write warm, mouth-watering, SEO-optimised content. Use sensory language (taste, texture, aroma). Include practical tips, common mistakes, and serving suggestions. Always add a FAQ section and a strong conclusion with a call to action.',
+  'Travel':'You are an experienced travel blogger. Write inspiring, practical travel guides with vivid descriptions. Include budget tips, best times to visit, local food recommendations, and hidden gems. Always add a FAQ section.',
+  'Finance':'You are a personal finance expert writer. Make money topics accessible and actionable. Use real numbers, step-by-step guidance, and relatable examples. Add appropriate disclaimers. Never give specific investment advice. Always add a FAQ.',
+  'Health & Fitness':'You are a certified health and fitness content writer. Write evidence-based, motivating content that balances science with accessibility. Include safety warnings where appropriate. Always add a FAQ section.',
+  'Technology':'You are a tech journalist and educator. Explain complex topics with clarity and enthusiasm. Use analogies to make hard concepts approachable. Include comparisons, use cases, and recommendations. Always add a FAQ.',
+  'Lifestyle':'You are a lifestyle content creator. Write aspirational yet practical content in a warm, direct "you" voice. Include product recommendations naturally. End with an encouraging call to action. Always add a FAQ.',
+  'Parenting':'You are a parenting content writer. Write with warmth, empathy, and non-judgmental support. Ground advice in evidence. Prioritise child safety. Always recommend professional help where appropriate. Include a FAQ.',
+  'Beauty & Fashion':'You are a beauty and fashion editor. Write with expertise and enthusiasm. Include specific products, techniques, and current trends. Always add tips for different skin types or body types. Include a FAQ.',
+  'Hairstyle & Hair Care':'You are a professional hairstylist and hair care content writer. Write with expertise about cuts, colours, treatments, and styling. Include product recommendations, heat protection tips, and advice for different hair types (straight, wavy, curly, coily). Always add a FAQ.',
+  'Nail Art':'You are a nail technician and nail art content writer. Write with enthusiasm about nail designs, techniques, products, and nail care. Include step-by-step guidance, tool recommendations, and tips for beginners and pros. Always add a FAQ.',
+  'Home Decor':'You are an interior design and home decor content writer. Write with a warm, aspirational tone. Include specific product ideas, style tips, budget options, and DIY alternatives. Cover different interior styles (modern, boho, minimalist, etc). Always add a FAQ.',
+  'Garden & Outdoors':'You are a gardening and outdoor living content writer. Write with enthusiasm and practical expertise. Include seasonal tips, plant care advice, tool recommendations, and beginner guidance. Always add a FAQ.',
+  'Business':'You are a business strategist and content writer. Write actionable, data-driven content. Use numbered steps, real examples, and practical frameworks. Include common pitfalls. Always add a FAQ.',
+  'DIY & Crafts':'You are a DIY and crafts blogger. Write clear, encouraging, step-by-step guides. List all materials upfront. Use encouraging language. Include safety tips and beginner modifications. Always add a FAQ.',
+  'Pet Care':'You are a pet care expert content writer. Write with warmth and scientific grounding. Always advise consulting a vet for medical concerns. Include breed-specific tips where relevant. Always add a FAQ.',
+  'General':'You are a professional SEO content writer. Create well-structured, engaging, thoroughly researched blog posts. Adapt tone to the topic. Use clear headings, varied sentence length, and actionable takeaways. Always add a FAQ.',
+};
+
+// Image style master prompts per niche — appended to every image query
+const DEFAULT_IMAGE_PROMPTS = {
+  'Food & Cooking':'appetizing food photography, natural light, overhead flat lay, vibrant fresh ingredients, shallow depth of field, professional food styling',
+  'Travel':'travel photography, stunning landscape, golden hour light, cinematic wide shot, vivid colors, wanderlust',
+  'Finance':'professional business photography, clean minimal office, financial charts, confident person, modern corporate setting',
+  'Health & Fitness':'fitness photography, active lifestyle, gym or outdoor workout, energetic and motivating, natural light, healthy and strong',
+  'Technology':'modern technology photography, sleek devices, clean studio lighting, dark background with neon accents, futuristic',
+  'Lifestyle':'lifestyle photography, bright airy room, natural light, happy person, aspirational everyday moment, warm tones',
+  'Parenting':'warm family photography, candid moment, soft natural light, children and parents, joyful and authentic',
+  'Beauty & Fashion':'beauty editorial photography, glamour portrait, professional makeup, studio lighting, high fashion',
+  'Hairstyle & Hair Care':'professional hair salon photography, beautiful hair close-up, model with perfect hairstyle, studio lighting, glossy and healthy hair',
+  'Nail Art':'nail art photography, close-up manicure shot, detailed nail design, clean white background, macro photography, vibrant nail polish',
+  'Home Decor':'interior design photography, beautifully styled room, natural light, magazine quality, cozy and aspirational home decor',
+  'Garden & Outdoors':'garden photography, lush green plants, natural sunlight, beautiful flowers, peaceful outdoor space, bokeh background',
+  'Business':'professional business photography, modern office environment, confident entrepreneur, clean and corporate',
+  'DIY & Crafts':'DIY craft photography, hands creating project, flat lay of craft supplies, bright natural light, colorful and creative',
+  'Pet Care':'pet photography, adorable animal portrait, natural light, warm and heartwarming, cute and expressive',
+  'General':'professional photography, high quality, sharp focus, natural lighting, clean composition',
+};
+
+const DEFAULT_RECIPE_PROMPT = 'You are a professional recipe developer and food blogger. Create complete, well-tested recipes with precise measurements. Write engaging headings and helpful tips. Include genuine cooking advice that makes the reader confident. Always give accurate prep and cook times.';
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+const PAGE_TITLES={gen:'Generate blog',recipe:'Recipe mode',links:'Link library',queue:'Bulk queue',prompts:'Master prompts',settings:'Settings'};
+function goPage(el){
+  document.querySelectorAll('.nav-i').forEach(i=>i.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  const pg=el.dataset.page;
+  $('page-'+pg).classList.add('active');
+  $('topbar-t').textContent=PAGE_TITLES[pg];
+  if(pg==='links') renderLinks();
+  if(pg==='prompts') initPromptEditor();
+  if(pg==='queue') initQueuePage();
+  if(pg==='settings') loadSettingsUI();
+}
+function stab(el,panelId){
+  const scope = el.closest('.page');
+  scope.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  scope.querySelectorAll('.tp').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  $(panelId).classList.add('active');
+}
+
+// ── Niche grids ───────────────────────────────────────────────────────────────
+function buildNicheGrid(){
+  $('niche-grid').innerHTML=NICHES.map(n=>`<span class="ntag${n===selNiche?' sel':''}" onclick="pickNiche(this,'${n}')">${n}</span>`).join('');
+}
+function pickNiche(el,n){selNiche=n;document.querySelectorAll('#niche-grid .ntag').forEach(t=>t.classList.remove('sel'));el.classList.add('sel');}
+
+function buildDietGrid(){
+  $('diet-grid').innerHTML=DIETARY.map(d=>`<span class="ntag" onclick="toggleDiet(this,'${d}')">${d}</span>`).join('');
+}
+function toggleDiet(el,d){el.classList.toggle('sel');if(el.classList.contains('sel'))selDietary.push(d);else selDietary=selDietary.filter(x=>x!==d);}
+
+// ── AI image toggle ───────────────────────────────────────────────────────────
+function toggleImgApi(){
+  const v=$('g-img-src').value;
+  $('img-style-row').style.display=['dalle','ideogram','together','sdrn','replicate'].includes(v)?'block':'none';
+}
+
+// ── Settings ─────────────────────────────────────────────────────────────────
+function loadSettingsUI(){
+  $('s-ai-provider').value = S.aiProvider;
+  $('s-ai-model').value    = S.aiModel;
+  $('s-claude-key').value  = S.claudeKey;
+  $('s-openai-key').value  = S.openaiKey;
+  $('s-grok-key').value    = S.grokKey;
+  $('s-gemini-key').value  = S.geminiKey;
+  $('s-mistral-key').value = S.mistralKey;
+  $('s-pexels').value      = S.pexelsKey;
+  $('s-unsplash').value    = S.unsplashKey;
+  $('s-dalle-key').value   = S.dalleKey;
+  $('s-ideogram-key').value= S.ideogramKey;
+  $('s-together-key').value= S.togetherKey;
+  $('s-stability-key').value=S.stabilityKey;
+  $('s-replicate-key').value  = S.replicateKey;
+  $('s-replicate-model').value= S.replicateModel||'prunaai/z-image-turbo';
+  $('s-replicate-res').value  = S.replicateRes||'2';
+  $('s-wp-url').value      = S.wpUrl;
+  $('s-wp-user').value     = S.wpUser;
+  $('s-wp-pass').value     = S.wpPass;
+  updateStatus();
+}
+function saveSettings(){
+  S.aiProvider  = $('s-ai-provider').value;
+  S.aiModel     = $('s-ai-model').value.trim();
+  S.claudeKey   = $('s-claude-key').value.trim();
+  S.openaiKey   = $('s-openai-key').value.trim();
+  S.grokKey     = $('s-grok-key').value.trim();
+  S.geminiKey   = $('s-gemini-key').value.trim();
+  S.mistralKey  = $('s-mistral-key').value.trim();
+  S.pexelsKey   = $('s-pexels').value.trim();
+  S.unsplashKey = $('s-unsplash').value.trim();
+  S.dalleKey    = $('s-dalle-key').value.trim();
+  S.ideogramKey = $('s-ideogram-key').value.trim();
+  S.togetherKey = $('s-together-key').value.trim();
+  S.stabilityKey= $('s-stability-key').value.trim();
+  S.replicateKey  = $('s-replicate-key').value.trim();
+  S.replicateModel= $('s-replicate-model').value.trim()||'prunaai/z-image-turbo';
+  S.replicateRes  = $('s-replicate-res').value||'2';
+  S.wpUrl       = $('s-wp-url').value.trim().replace(/\/+$/,'');
+  S.wpUser      = $('s-wp-user').value.trim();
+  S.wpPass      = $('s-wp-pass').value.trim();
+  saveS(); updateStatus(); updateAiDot();
+  updateDomainDropdown();
+  $('s-saved').style.display='flex';
+  setTimeout(()=>$('s-saved').style.display='none',2200);
+}
+function updateStatus(){
+  const badge=(id,ok)=>$(id).outerHTML=`<div id="${id}" class="bdg ${ok?'bdg-g':'bdg-gr'}">${ok?'connected':'not set'}</div>`;
+  badge('st-claude',S.claudeKey); badge('st-openai',S.openaiKey);
+  badge('st-pexels',S.pexelsKey); badge('st-wp',S.wpUrl&&S.wpUser);
+}
+function activeAiKey(){
+  if(S.aiProvider==='claude') return S.claudeKey;
+  if(S.aiProvider==='openai') return S.openaiKey;
+  if(S.aiProvider==='grok')   return S.grokKey;
+  if(S.aiProvider==='gemini') return S.geminiKey;
+  if(S.aiProvider==='mistral')return S.mistralKey;
+  return '';
+}
+function updateAiDot(){
+  const ok=!!activeAiKey();
+  $('ai-dot').classList.toggle('on',ok);
+  $('ai-lbl').textContent=ok?`${S.aiProvider} active`:'No AI key';
+}
+
+// ── AI call (multi-provider) ─────────────────────────────────────────────────
+async function callAI(systemPrompt, userPrompt, maxTokens=8000){
+  const provider=S.aiProvider;
+  const key=activeAiKey();
+  if(!key) throw new Error('No API key set for '+provider+'. Go to Settings.');
+
+  // ── Claude ──
+  if(provider==='claude'){
+    const model=S.aiModel||'claude-opus-4-5';
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model,max_tokens:maxTokens,system:systemPrompt,messages:[{role:'user',content:userPrompt}]})
+    });
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||'Claude error '+r.status);}
+    const d=await r.json();return d.content[0].text;
+  }
+
+  // ── OpenAI / Grok / Mistral (same format) ──
+  if(['openai','grok','mistral'].includes(provider)){
+    const endpoints={openai:'https://api.openai.com/v1/chat/completions',grok:'https://api.x.ai/v1/chat/completions',mistral:'https://api.mistral.ai/v1/chat/completions'};
+    const models={openai:S.aiModel||'gpt-4o',grok:S.aiModel||'grok-3-latest',mistral:S.aiModel||'mistral-large-latest'};
+    const r=await fetch(endpoints[provider],{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model:models[provider],max_tokens:maxTokens,messages:[{role:'system',content:systemPrompt},{role:'user',content:userPrompt}]})
+    });
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||provider+' error '+r.status);}
+    const d=await r.json();return d.choices[0].message.content;
+  }
+
+  // ── Gemini ──
+  if(provider==='gemini'){
+    const model=S.aiModel||'gemini-1.5-pro';
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:systemPrompt+'\n\n'+userPrompt}]}],generationConfig:{maxOutputTokens:maxTokens}})
+    });
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||'Gemini error '+r.status);}
+    const d=await r.json();return d.candidates[0].content.parts[0].text;
+  }
+  throw new Error('Unknown provider: '+provider);
+}
+
+// ── AI image generation ───────────────────────────────────────────────────────
+async function genAiImage(prompt, source){
+  const style=$('g-img-style')?.value||'photorealistic, high quality';
+  const fullPrompt=prompt+', '+style;
+
+  if(source==='dalle'){
+    const key=S.dalleKey||S.openaiKey;
+    if(!key) return null;
+    const r=await fetch('https://api.openai.com/v1/images/generations',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model:'dall-e-3',prompt:fullPrompt,n:1,size:'1792x1024'})
+    });
+    if(!r.ok) return null;
+    const d=await r.json();
+    return {url:d.data[0].url,alt:prompt,credit:'Image by DALL-E 3'};
+  }
+
+  if(source==='ideogram'){
+    if(!S.ideogramKey) return null;
+    const r=await fetch('https://api.ideogram.ai/generate',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Api-Key':S.ideogramKey},
+      body:JSON.stringify({image_request:{prompt:fullPrompt,aspect_ratio:'ASPECT_16_9',model:'V_2',magic_prompt_option:'AUTO'}})
+    });
+    if(!r.ok) return null;
+    const d=await r.json();
+    const url=d.data?.[0]?.url;
+    return url?{url,alt:prompt,credit:'Image by Ideogram'}:null;
+  }
+
+  if(source==='together'){
+    if(!S.togetherKey) return null;
+    const r=await fetch('https://api.together.xyz/v1/images/generations',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.togetherKey},
+      body:JSON.stringify({model:'black-forest-labs/FLUX.1-schnell-Free',prompt:fullPrompt,width:1344,height:768,steps:4,n:1,response_format:'url'})
+    });
+    if(!r.ok) return null;
+    const d=await r.json();
+    return d.data?.[0]?.url?{url:d.data[0].url,alt:prompt,credit:'Image by FLUX'}:null;
+  }
+
+  if(source==='sdrn'){
+    if(!S.stabilityKey) return null;
+    const r=await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.stabilityKey,'Accept':'application/json'},
+      body:JSON.stringify({text_prompts:[{text:fullPrompt,weight:1}],cfg_scale:7,height:768,width:1344,steps:30,samples:1})
+    });
+    if(!r.ok) return null;
+    const d=await r.json();
+    const b64=d.artifacts?.[0]?.base64;
+    return b64?{url:'data:image/png;base64,'+b64,alt:prompt,credit:'Image by Stable Diffusion'}:null;
+  }
+
+  if(source==='replicate'){
+    if(!S.replicateKey) return null;
+    const model = S.replicateModel || 'prunaai/z-image-turbo';
+    const targetRes = parseFloat(S.replicateRes || '2');
+    try {
+      const r = await fetch('/api/replicate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: S.replicateKey,
+          model: model,
+          input: {
+            prompt: fullPrompt,
+            target_resolution: targetRes,
+          }
+        })
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(()=>({}));
+        console.warn('Replicate proxy error:', err);
+        return null;
+      }
+      const data = await r.json();
+      if (data.status === 'succeeded') {
+        const imgUrl = Array.isArray(data.output) ? data.output[0] : data.output;
+        return imgUrl ? { url: imgUrl, alt: prompt, credit: `Image by Replicate · ${model.split('/').pop()}` } : null;
+      }
+      console.warn('Replicate failed:', data.error || data.status);
+    } catch(e) {
+      console.warn('Replicate fetch error:', e.message);
+    }
+    return null;
+  }
+
+  return null;
+}
+
+// ── Stock images ──────────────────────────────────────────────────────────────
+async function fetchPexels(q){
+  if(!S.pexelsKey) return null;
+  try{
+    const r=await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=1&orientation=landscape`,{headers:{Authorization:S.pexelsKey}});
+    const d=await r.json();
+    if(d.photos?.length){const p=d.photos[0];return{url:p.src.large,alt:p.alt||q,credit:`Photo by <a href="${p.photographer_url}">${p.photographer}</a> on Pexels`};}
+  }catch{}return null;
+}
+async function fetchUnsplash(q){
+  if(!S.unsplashKey) return null;
+  try{
+    const r=await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=1&orientation=landscape`,{headers:{Authorization:'Client-ID '+S.unsplashKey}});
+    const d=await r.json();
+    if(d.results?.length){const i=d.results[0];return{url:i.urls.regular,alt:i.alt_description||q,credit:`Photo by <a href="${i.user.links.html}">${i.user.name}</a> on Unsplash`};}
+  }catch{}return null;
+}
+async function fetchImg(q,source){
+  const aiSources=['dalle','ideogram','together','sdrn','replicate'];
+  if(aiSources.includes(source)) return await genAiImage(q,source);
+  if(source==='pexels') return (await fetchPexels(q))||(await fetchUnsplash(q));
+  if(source==='unsplash') return (await fetchUnsplash(q))||(await fetchPexels(q));
+  return null;
+}
+
+function getNicheImagePrompt(niche){
+  return S.customImagePrompts[niche] || DEFAULT_IMAGE_PROMPTS[niche] || DEFAULT_IMAGE_PROMPTS['General'];
+}
+
+async function injectImgs(html, source, articleTitle, niche){
+  if(source==='none') return html;
+  const imageStyle = getNicheImagePrompt(niche);
+  const h2s=[...html.matchAll(/<h2[^>]*>(.*?)<\/h2>/gi)];
+  for(const m of h2s){
+    const h2Text = m[1].replace(/<[^>]+>/g,'').replace(/[^a-zA-Z0-9 ]/g,'').trim();
+    // Skip generic H2s that produce bad images
+    const genericH2s = ['frequently asked questions','faq','conclusion','final thoughts','summary','introduction','overview','tips and tricks','why it matters'];
+    if(genericH2s.some(g => h2Text.toLowerCase().includes(g))) continue;
+    // Smart prompt: H2 context + article title + niche image style
+    const q = `${h2Text}, ${articleTitle}, ${imageStyle}`.slice(0, 200);
+    const img=await fetchImg(q, source);
+    if(img){
+      const tag=`\n<figure style="margin:1.5em 0"><img src="${img.url}" alt="${img.alt}" style="width:100%;border-radius:8px;display:block" loading="lazy"><figcaption style="font-size:.8em;color:#777;margin-top:4px">${img.credit}</figcaption></figure>\n`;
+      html=html.replace(m[0], m[0]+tag);
+    }
+  }
+  return html;
+}
+
+// ── Progress ──────────────────────────────────────────────────────────────────
+function prog(barId,lblId,wrapId,pct,txt){
+  $(wrapId).style.display='block';
+  $(barId).style.width=pct+'%';
+  $(lblId).textContent=txt;
+}
+
+// ── Master prompts ────────────────────────────────────────────────────────────
+function getNichePrompt(niche){
+  return S.customPrompts[niche]||DEFAULT_PROMPTS[niche]||DEFAULT_PROMPTS['General'];
+}
+function getRecipePrompt(){
+  return S.recipePrompt||DEFAULT_RECIPE_PROMPT;
+}
+function initPromptEditor(){
+  const sel=$('prompt-niche-sel');
+  sel.innerHTML=NICHES.map(n=>`<option value="${n}">${n}</option>`).join('');
+  const imgSel=$('img-prompt-niche-sel');
+  imgSel.innerHTML=NICHES.map(n=>`<option value="${n}">${n}</option>`).join('');
+  loadPromptEditor();
+  loadImgPromptEditor();
+  $('rec-master-prompt').value=S.recipePrompt||DEFAULT_RECIPE_PROMPT;
+}
+function loadPromptEditor(){
+  const n=$('prompt-niche-sel').value;
+  $('prompt-editor').value=S.customPrompts[n]||DEFAULT_PROMPTS[n]||'';
+}
+function savePrompt(){
+  const n=$('prompt-niche-sel').value;
+  if(!S.customPrompts) S.customPrompts={};
+  S.customPrompts[n]=$('prompt-editor').value.trim();
+  saveS();
+  $('prompt-saved').style.display='flex';
+  setTimeout(()=>$('prompt-saved').style.display='none',1800);
+}
+function resetPrompt(){
+  const n=$('prompt-niche-sel').value;
+  delete S.customPrompts[n];
+  saveS();
+  $('prompt-editor').value=DEFAULT_PROMPTS[n]||'';
+}
+function loadImgPromptEditor(){
+  const n=$('img-prompt-niche-sel').value;
+  $('img-prompt-editor').value=S.customImagePrompts[n]||DEFAULT_IMAGE_PROMPTS[n]||'';
+}
+function saveImgPrompt(){
+  const n=$('img-prompt-niche-sel').value;
+  if(!S.customImagePrompts) S.customImagePrompts={};
+  S.customImagePrompts[n]=$('img-prompt-editor').value.trim();
+  saveS();
+  $('img-prompt-saved').style.display='flex';
+  setTimeout(()=>$('img-prompt-saved').style.display='none',1800);
+}
+function resetImgPrompt(){
+  const n=$('img-prompt-niche-sel').value;
+  delete S.customImagePrompts[n];
+  saveS();
+  $('img-prompt-editor').value=DEFAULT_IMAGE_PROMPTS[n]||'';
+}
+function saveRecipePrompt(){
+  S.recipePrompt=$('rec-master-prompt').value.trim();
+  saveS();
+  $('rec-prompt-saved').style.display='flex';
+  setTimeout(()=>$('rec-prompt-saved').style.display='none',1800);
+}
+function resetRecipePrompt(){
+  S.recipePrompt='';
+  $('rec-master-prompt').value=DEFAULT_RECIPE_PROMPT;
+  saveS();
+}
+
+// ── Domain / link library ─────────────────────────────────────────────────────
+let activeDomain=null;
+
+function addDomain(){
+  let d=$('new-dom').value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+  if(!d) return alert('Enter a domain name.');
+  if(!S.domains[d]) S.domains[d]=[];
+  saveS(); renderLinks(); updateDomainDropdown();
+  $('new-dom').value='';
+  setActiveDomain(d);
+}
+
+function setActiveDomain(d){
+  activeDomain=d;
+  $('active-dom-lbl').textContent=d;
+  $('url-add-card').style.display='block';
+  $('url-list-wrap').style.display='block';
+  renderUrlList();
+  renderDomList();
+}
+
+function bulkAddUrls(){
+  if(!activeDomain) return alert('Select a domain first.');
+  const lines=$('bulk-urls').value.trim().split('\n').filter(l=>l.trim());
+  let added=0;
+  lines.forEach(line=>{
+    const parts=line.split('|');
+    const url=parts[0].trim();
+    const desc=parts[1]?parts[1].trim():(url.split('/').pop().replace(/-/g,' ')||url);
+    if(url){S.domains[activeDomain].push({url,desc});added++;}
+  });
+  saveS(); $('bulk-urls').value='';
+  renderUrlList(); renderDomList(); updateDomainDropdown();
+  alert(`Added ${added} URL${added!==1?'s':''} to ${activeDomain}`);
+}
+
+function delUrl(dom,idx){
+  S.domains[dom].splice(idx,1);
+  saveS(); renderUrlList(); renderDomList(); updateDomainDropdown();
+}
+
+function delDomain(d){
+  if(!confirm(`Delete domain "${d}" and all its URLs?`)) return;
+  delete S.domains[d];
+  if(activeDomain===d){activeDomain=null;$('url-add-card').style.display='none';$('url-list-wrap').style.display='none';}
+  saveS(); renderLinks(); updateDomainDropdown();
+}
+
+function renderDomList(){
+  const el=$('dom-list');
+  const doms=Object.keys(S.domains);
+  if(!doms.length){el.innerHTML='<p style="color:var(--ink3);font-size:13px">No domains yet.</p>';return;}
+  el.innerHTML=doms.map(d=>`
+    <div class="dom-pill${d===activeDomain?' sel':''}" onclick="setActiveDomain('${d}')">
+      <div>
+        <div class="dom-name">${d}</div>
+        <div class="dom-count">${S.domains[d].length} URLs</div>
+      </div>
+      <button class="btn btn-d" style="padding:3px 10px;font-size:12px" onclick="event.stopPropagation();delDomain('${d}')">Remove</button>
+    </div>`).join('');
+}
+
+function renderUrlList(){
+  const el=$('url-list');
+  if(!activeDomain||!S.domains[activeDomain]?.length){el.innerHTML='<p style="color:var(--ink3);font-size:13px;padding:8px 0">No URLs yet. Paste some above.</p>';return;}
+  el.innerHTML=S.domains[activeDomain].map((u,i)=>`
+    <div class="lrow">
+      <span class="lurl">${u.url}</span>
+      <span style="color:var(--ink2)">${u.desc}</span>
+      <button class="btn btn-d" style="padding:3px 9px;font-size:11.5px" onclick="delUrl('${activeDomain}',${i})">✕</button>
+    </div>`).join('');
+}
+
+function addAff(){
+  const kw=$('aff-kw').value.trim(), url=$('aff-url').value.trim(), lbl=$('aff-lbl').value.trim()||kw;
+  if(!kw||!url) return alert('Fill in keyword and URL.');
+  S.affiliates.push({keyword:kw,url,label:lbl});
+  saveS(); $('aff-kw').value=''; $('aff-url').value=''; $('aff-lbl').value='';
+  renderAffList();
+}
+
+function bulkAddAff(){
+  const lines=$('bulk-aff').value.trim().split('\n').filter(l=>l.trim());
+  let added=0;
+  lines.forEach(line=>{
+    const parts=line.split('|');
+    if(parts.length>=2){
+      S.affiliates.push({keyword:parts[0].trim(),url:parts[1].trim(),label:(parts[2]||parts[0]).trim()});
+      added++;
+    }
+  });
+  saveS(); $('bulk-aff').value='';
+  renderAffList();
+  if(added) alert(`Added ${added} affiliate link${added!==1?'s':''}.`);
+  else alert('No valid lines found. Use format: keyword | url | label');
+}
+
+function delAff(idx){
+  S.affiliates.splice(idx,1);
+  saveS(); renderAffList();
+}
+
+function renderAffList(){
+  const el=$('aff-list');
+  $('aff-count-lbl').textContent=`${S.affiliates.length} affiliate link${S.affiliates.length!==1?'s':''}`;
+  if(!S.affiliates.length){el.innerHTML='<p style="color:var(--ink3);font-size:13px;padding:8px 0">No affiliate links yet.</p>';$('aff-list-card').style.display='none';return;}
+  $('aff-list-card').style.display='block';
+  el.innerHTML=S.affiliates.map((a,i)=>`
+    <div style="display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:8px;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--surface2);font-size:13px">
+      <strong>${a.keyword}</strong>
+      <span class="lurl">${a.url}</span>
+      <span style="color:var(--ink2)">${a.label}</span>
+      <button class="btn btn-d" style="padding:3px 9px;font-size:11.5px" onclick="delAff(${i})">✕</button>
+    </div>`).join('');
+}
+
+function renderLinks(){
+  renderDomList(); renderUrlList(); renderAffList();
+}
+
+function updateDomainDropdown(){
+  const sel=$('g-domain');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— none / skip internal links —</option>';
+  Object.keys(S.domains).forEach(d=>{
+    const opt=document.createElement('option');
+    opt.value=d; opt.textContent=`${d} (${S.domains[d].length} URLs)`;
+    sel.appendChild(opt);
+  });
+  sel.value=prev||'';
+  updateDomainCount();
+}
+
+function updateDomainCount(){
+  const d=$('g-domain').value;
+  $('g-domain-count').textContent=d&&S.domains[d]?`${S.domains[d].length} links will be available for injection`:'';
+}
+
+// ── Outline preview ────────────────────────────────────────────────────────────
+async function previewOutline(){
+  const title=$('g-title').value.trim();
+  if(!title) return alert('Enter a blog title first.');
+  if(!activeAiKey()) return alert('Add an AI key in Settings.');
+  const h2=$('g-h2').value;
+  prog('g-prog-bar','g-prog-lbl','g-prog',25,'Generating outline...');
+  try{
+    const txt=await callAI('Return ONLY a numbered list of headings, nothing else.',
+      `Generate exactly ${h2} H2 section headings for a blog post titled: "${title}"\nNiche: ${selNiche}`,300);
+    const lines=txt.trim().split('\n').map(l=>l.replace(/^\d+[\.\)]\s*/,'').trim()).filter(Boolean);
+    $('outline-list').innerHTML=lines.slice(0,h2).map((h,i)=>`<div style="padding:8px 0;border-bottom:0.5px solid var(--surface2);font-size:13.5px"><strong>${i+1}.</strong> ${h}</div>`).join('');
+    $('outline-box').style.display='block';
+    prog('g-prog-bar','g-prog-lbl','g-prog',100,'Done');
+    setTimeout(()=>$('g-prog').style.display='none',900);
+  }catch(e){
+    $('g-prog').style.display='none';
+    alert('Error: '+e.message);
+  }
+}
+
+// ── Generate blog ─────────────────────────────────────────────────────────────
+async function generateBlog(){
+  const title=$('g-title').value.trim();
+  if(!title) return alert('Enter a blog title.');
+  if(!activeAiKey()){$('gen-warn').style.display='flex';return;}
+  $('gen-warn').style.display='none';
+
+  const wc=$('g-wc').value, h2=$('g-h2').value, tone=$('g-tone').value;
+  const extra=$('g-extra').value, imgSrc=$('g-img-src').value, featSrc=$('g-feat').value;
+  const selDom=$('g-domain').value;
+  const useAff=$('g-use-aff').checked;
+
+  $('g-btn').disabled=true; $('g-out').style.display='none';
+  prog('g-prog-bar','g-prog-lbl','g-prog',10,'Preparing...');
+
+  // Build link blocks
+  let linkBlock='';
+  if(selDom&&S.domains[selDom]?.length){
+    linkBlock+='\n\nINTERNAL LINKS — inject these as HTML <a> tags inline in the body where contextually relevant (not as a list at the end):\n';
+    S.domains[selDom].forEach(l=>linkBlock+=`  <a href="${l.url}">${l.desc}</a>\n`);
+  }
+  if(useAff&&S.affiliates.length){
+    linkBlock+='\n\nAFFILIATE LINKS — when these keywords appear naturally, wrap them with the anchor tag once only:\n';
+    S.affiliates.forEach(a=>linkBlock+=`  keyword: "${a.keyword}" → <a href="${a.url}" rel="sponsored">${a.label}</a>\n`);
+  }
+
+  const sysPrompt=getNichePrompt(selNiche);
+  const userPrompt=`Write a complete, SEO-optimised blog post.
+
+Title: ${title}
+Tone: ${tone}
+Target word count: ${wc} words
+Number of H2 sections: ${h2} (plus FAQ and Conclusion)
+${extra?'Additional instructions: '+extra:''}
+${linkBlock}
+
+OUTPUT: Return ONLY valid HTML — no markdown, no code fences, no explanation.
+- <h1> for title
+- <p> for intro (2–3 paragraphs)
+- <h2> + <p> for each of the ${h2} main sections
+- <h2>Frequently Asked Questions</h2> with 4–5 Q&As using <h3> questions and <p> answers
+- <h2>Conclusion</h2> with strong closing
+- Inject internal and affiliate links naturally inside paragraphs
+- Do NOT include html / head / body tags`;
+
+  try{
+    prog('g-prog-bar','g-prog-lbl','g-prog',30,'Claude is writing...');
+    let html=await callAI(sysPrompt,userPrompt,8000);
+
+    // Feature image
+    let featHtml='';
+    if(featSrc!=='none'){
+      prog('g-prog-bar','g-prog-lbl','g-prog',55,'Generating feature image...');
+      const featPrompt=`${title}, blog hero image`;
+      const src=featSrc==='same'?imgSrc:featSrc;
+      const img=await fetchImg(featPrompt,src);
+      if(img) featHtml=`<figure style="margin:0 0 2rem"><img src="${img.url}" alt="${img.alt}" style="width:100%;max-height:480px;object-fit:cover;border-radius:10px;display:block"><figcaption style="font-size:.8em;color:#888;margin-top:4px">${img.credit}</figcaption></figure>`;
+    }
+
+    // H2 images
+    prog('g-prog-bar','g-prog-lbl','g-prog',70,'Fetching images for each section...');
+    if(imgSrc!=='none') html=await injectImgs(html, imgSrc, title, selNiche);
+
+    if(featHtml){
+      // Insert feature image after h1
+      html=html.replace(/(<h1[^>]*>.*?<\/h1>)/i,'$1\n'+featHtml);
+    }
+
+    S.lastBlogHtml=html; S.lastBlogTitle=title; saveS();
+    prog('g-prog-bar','g-prog-lbl','g-prog',95,'Rendering...');
+
+    const previewDoc=blogPreviewDoc(html);
+    $('g-iframe').srcdoc=previewDoc;
+    $('g-code').textContent=html;
+    $('g-out-title').textContent=title;
+    renderWPArea('g-wp',title,html);
+    $('g-out').style.display='block';
+    prog('g-prog-bar','g-prog-lbl','g-prog',100,'Done!');
+    setTimeout(()=>$('g-prog').style.display='none',1000);
+    $('g-out').scrollIntoView({behavior:'smooth'});
+  }catch(e){
+    $('g-prog').style.display='none';
+    alert('Generation failed: '+e.message);
+  }
+  $('g-btn').disabled=false;
+}
+
+function blogPreviewDoc(html){
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <style>body{font-family:Georgia,serif;line-height:1.75;max-width:800px;margin:0 auto;padding:24px 20px;color:#1a1a1a}
+  h1{font-size:2rem;margin-bottom:.4rem}h2{font-size:1.35rem;margin-top:2.2rem;color:#111}
+  h3{font-size:1.05rem;color:#222}p{margin:.9rem 0}
+  img{max-width:100%;border-radius:8px;display:block}figure{margin:1.5em 0}
+  figcaption{font-size:.78em;color:#888;margin-top:4px}a{color:#1a6b3c}
+  pre{background:#f5f5f5;padding:12px;border-radius:6px;overflow-x:auto}</style>
+  </head><body>${html}</body></html>`;
+}
+
+// ── Generate recipe ───────────────────────────────────────────────────────────
+async function generateRecipe(){
+  const name=$('r-name').value.trim();
+  if(!name) return alert('Enter a recipe name.');
+  if(!activeAiKey()){$('rec-warn').style.display='flex';return;}
+  $('rec-warn').style.display='none';
+
+  const serv=$('r-serv').value, diff=$('r-diff').value;
+  const cuisine=$('r-cuisine').value, extra=$('r-extra').value;
+  const imgSrc=$('r-img').value;
+  const overridePrompt=$('r-masterprompt').value.trim();
+  const sysPrompt=overridePrompt||getRecipePrompt();
+
+  prog('r-prog-bar','r-prog-lbl','r-prog',15,'Creating recipe...');
+  $('r-out').style.display='none';
+
+  const userPrompt=`Create a complete recipe for: ${name}
+Servings: ${serv}, Difficulty: ${diff}, Cuisine: ${cuisine||'any'}, Dietary: ${selDietary.join(',')||'none specified'}
+${extra?'Notes: '+extra:''}
+
+Return ONLY valid JSON — no markdown, no code fences:
+{"name":"Full recipe name","tagline":"One enticing line","prep_time":"X minutes","cook_time":"X minutes","total_time":"X minutes","servings":${serv},"difficulty":"${diff}","cuisine":"${cuisine||''}","dietary":${JSON.stringify(selDietary)},"description":"2-3 sentence intro","ingredients":[{"amount":"2","unit":"cups","item":"flour"}],"instructions":[{"step":1,"title":"Step title","detail":"Full instruction text"}],"tips":["tip 1","tip 2","tip 3"],"nutrition_per_serving":{"calories":"approx X kcal","protein":"Xg","carbs":"Xg","fat":"Xg","fiber":"Xg"},"faq":[{"question":"Can I make this ahead?","answer":"Yes..."}]}`;
+
+  try{
+    let raw=await callAI(sysPrompt,userPrompt,4000);
+    raw=raw.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```$/,'').trim();
+    const recipe=JSON.parse(raw);
+
+    prog('r-prog-bar','r-prog-lbl','r-prog',65,'Fetching recipe image...');
+    let imageUrl=null;
+    if(imgSrc!=='none'){
+      const img=await fetchImg(name+' food photography',imgSrc);
+      if(img) imageUrl=img.url;
+    }
+
+    const html=buildRecipeHtml(recipe,imageUrl);
+    const schema=buildRecipeSchema(recipe,imageUrl);
+    S.lastRecipeHtml=html; S.lastRecipeSchema=JSON.stringify(schema,null,2); S.lastRecipeName=recipe.name; saveS();
+
+    const previewDoc=`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <style>body{font-family:Georgia,serif;line-height:1.7;max-width:800px;margin:0 auto;padding:24px 20px;color:#1a1a1a}
+    h1,h2,h3{color:#111}img{max-width:100%;border-radius:8px}a{color:#1a6b3c}
+    summary{cursor:pointer;font-weight:600}details{margin-bottom:8px;border:1px solid #e5e5e5;border-radius:6px;padding:8px 12px}
+    @media print{.no-print{display:none}.recipe-print-card{page-break-inside:avoid}}</style>
+    </head><body>${html}</body></html>`;
+    $('r-iframe').srcdoc=previewDoc;
+    $('r-code').textContent=html;
+    $('r-schema-code').textContent=S.lastRecipeSchema;
+    $('r-out-title').textContent=recipe.name;
+    renderWPArea('r-wp',recipe.name,html+`\n<script type="application/ld+json">${JSON.stringify(schema)}<\/script>`);
+
+    $('r-out').style.display='block';
+    prog('r-prog-bar','r-prog-lbl','r-prog',100,'Done!');
+    setTimeout(()=>$('r-prog').style.display='none',900);
+    $('r-out').scrollIntoView({behavior:'smooth'});
+  }catch(e){
+    $('r-prog').style.display='none';
+    alert('Recipe generation failed: '+e.message);
+  }
+}
+
+function buildRecipeHtml(r,imageUrl){
+  const hero=imageUrl?`<img src="${imageUrl}" alt="${r.name}" style="width:100%;max-height:440px;object-fit:cover;border-radius:10px;margin-bottom:1.5rem;display:block">`:'' ;
+  const badges=(r.dietary||[]).map(d=>`<span style="background:#e8f5e9;color:#2e7d32;padding:3px 10px;border-radius:12px;font-size:.8em;margin:0 4px 4px 0;display:inline-block">${d}</span>`).join('');
+  const ings=(r.ingredients||[]).map(i=>`<tr><td style="padding:6px 12px 6px 0;border-bottom:1px solid #f0f0f0;font-weight:600;white-space:nowrap;vertical-align:top">${i.amount} ${i.unit}</td><td style="padding:6px 0;border-bottom:1px solid #f0f0f0;vertical-align:top">${i.item}</td></tr>`).join('');
+  const steps=(r.instructions||[]).map(s=>`<div style="display:flex;gap:14px;margin-bottom:1.4rem;page-break-inside:avoid"><div style="min-width:32px;height:32px;background:#1a6b3c;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9em;flex-shrink:0;margin-top:2px">${s.step}</div><div><strong style="display:block;margin-bottom:3px">${s.title}</strong><span>${s.detail}</span></div></div>`).join('');
+  const tips=(r.tips||[]).map(t=>`<li style="margin-bottom:7px;padding-left:4px">${t}</li>`).join('');
+  const faq=(r.faq||[]).map(f=>`<details style="margin-bottom:8px;border:1px solid #e5e5e5;border-radius:6px;padding:8px 14px"><summary style="font-weight:600;padding:2px 0">${f.question}</summary><p style="margin:8px 0 2px">${f.answer}</p></details>`).join('');
+  const n=r.nutrition_per_serving||{};
+
+  // Printable card (hidden on screen, shown on print)
+  const printCard=`
+<div class="recipe-print-card no-print" style="border:2px solid #e0e0e0;border-radius:12px;padding:24px 28px;margin:2rem 0;background:#fff">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div>
+      <h2 style="margin:0 0 4px;font-size:1.4rem">${r.name}</h2>
+      <p style="margin:0;color:#666;font-style:italic">${r.tagline||''}</p>
+    </div>
+    <button onclick="window.print()" style="background:#1a6b3c;color:#fff;border:none;border-radius:8px;padding:8px 18px;cursor:pointer;font-size:14px;font-family:sans-serif">🖨 Print</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:#f9f9f6;border-radius:8px;padding:12px;text-align:center;margin-bottom:16px">
+    <div><div style="font-size:.7em;color:#888;text-transform:uppercase;letter-spacing:.06em">Prep</div><div style="font-weight:700">${r.prep_time||'—'}</div></div>
+    <div><div style="font-size:.7em;color:#888;text-transform:uppercase;letter-spacing:.06em">Cook</div><div style="font-weight:700">${r.cook_time||'—'}</div></div>
+    <div><div style="font-size:.7em;color:#888;text-transform:uppercase;letter-spacing:.06em">Total</div><div style="font-weight:700">${r.total_time||'—'}</div></div>
+    <div><div style="font-size:.7em;color:#888;text-transform:uppercase;letter-spacing:.06em">Serves</div><div style="font-weight:700">${r.servings||'—'}</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div>
+      <h3 style="margin:0 0 10px;font-size:1rem;border-bottom:2px solid #1a6b3c;padding-bottom:6px">Ingredients</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:.9em">${ings}</table>
+    </div>
+    <div>
+      <h3 style="margin:0 0 10px;font-size:1rem;border-bottom:2px solid #1a6b3c;padding-bottom:6px">Instructions</h3>
+      ${steps}
+    </div>
+  </div>
+  <div style="margin-top:14px;background:#f9fbe7;border-radius:8px;padding:12px">
+    <strong style="font-size:.85em;color:#555;text-transform:uppercase;letter-spacing:.05em">Nutrition per serving</strong>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px;text-align:center">
+      <div><div style="font-size:1em;font-weight:700">${n.calories||'—'}</div><div style="font-size:.7em;color:#777">Calories</div></div>
+      <div><div style="font-size:1em;font-weight:700">${n.protein||'—'}</div><div style="font-size:.7em;color:#777">Protein</div></div>
+      <div><div style="font-size:1em;font-weight:700">${n.carbs||'—'}</div><div style="font-size:.7em;color:#777">Carbs</div></div>
+      <div><div style="font-size:1em;font-weight:700">${n.fat||'—'}</div><div style="font-size:.7em;color:#777">Fat</div></div>
+      <div><div style="font-size:1em;font-weight:700">${n.fiber||'—'}</div><div style="font-size:.7em;color:#777">Fiber</div></div>
+    </div>
+  </div>
+</div>`;
+
+  return `<article>
+${hero}
+<h1 style="margin-bottom:.25rem">${r.name}</h1>
+<p style="font-style:italic;color:#666;margin-top:0">${r.tagline||''}</p>
+<div style="margin:.5rem 0 1.2rem">${badges}</div>
+<p>${r.description||''}</p>
+${printCard}
+<h2>Ingredients</h2>
+<table style="border-collapse:collapse;margin-bottom:1.5rem">${ings}</table>
+<h2>Instructions</h2>${steps}
+<div style="background:#f9fbe7;border-radius:8px;padding:1rem;margin:1.5rem 0">
+  <h3 style="margin:0 0 .5rem">Nutrition per serving</h3>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center">
+    <div><div style="font-size:1.1em;font-weight:700">${n.calories||'—'}</div><div style="font-size:.75em;color:#777">Calories</div></div>
+    <div><div style="font-size:1.1em;font-weight:700">${n.protein||'—'}</div><div style="font-size:.75em;color:#777">Protein</div></div>
+    <div><div style="font-size:1.1em;font-weight:700">${n.carbs||'—'}</div><div style="font-size:.75em;color:#777">Carbs</div></div>
+    <div><div style="font-size:1.1em;font-weight:700">${n.fat||'—'}</div><div style="font-size:.75em;color:#777">Fat</div></div>
+    <div><div style="font-size:1.1em;font-weight:700">${n.fiber||'—'}</div><div style="font-size:.75em;color:#777">Fiber</div></div>
+  </div>
+</div>
+<h2>Tips &amp; tricks</h2><ul style="padding-left:1.2rem">${tips}</ul>
+<h2>Frequently asked questions</h2>${faq}
+</article>`;
+}
+
+function buildRecipeSchema(r,imageUrl){
+  const toMin=s=>isNaN(parseInt(s))?0:parseInt(s);
+  const schema={'@context':'https://schema.org','@type':'Recipe',name:r.name,description:r.description||'',
+    recipeYield:String(r.servings||4),
+    prepTime:`PT${toMin(r.prep_time)}M`,cookTime:`PT${toMin(r.cook_time)}M`,
+    recipeIngredient:(r.ingredients||[]).map(i=>`${i.amount} ${i.unit} ${i.item}`.trim()),
+    recipeInstructions:(r.instructions||[]).map(s=>({'@type':'HowToStep',name:s.title,text:s.detail})),
+    recipeCuisine:r.cuisine||'',recipeCategory:r.difficulty||'',
+  };
+  const n=r.nutrition_per_serving;
+  if(n) schema.nutrition={'@type':'NutritionInformation',calories:n.calories||'',proteinContent:n.protein||'',carbohydrateContent:n.carbs||'',fatContent:n.fat||'',fiberContent:n.fiber||''};
+  if(imageUrl) schema.image=imageUrl;
+  return schema;
+}
+
+function printRecipe(){
+  const html=S.lastRecipeHtml; if(!html) return;
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Recipe</title>
+  <style>body{font-family:Georgia,serif;line-height:1.6;max-width:900px;margin:0 auto;padding:20px;color:#111}
+  h1,h2,h3{color:#111}img{max-width:100%;border-radius:6px}table{border-collapse:collapse}
+  @media print{button{display:none!important}}</style>
+  </head><body>${html}<script>setTimeout(()=>window.print(),400)<\/script></body></html>`);
+  w.document.close();
+}
+
+// ── WordPress publish (fixed) ─────────────────────────────────────────────────
+function renderWPArea(containerId,title,html){
+  const c=$(containerId);
+  if(!S.wpUrl||!S.wpUser||!S.wpPass){
+    c.innerHTML='<div class="alert al-i">Add WordPress credentials in <strong>Settings</strong> to publish directly.</div>';
+    return;
+  }
+  c._html=html; c._title=title;
+  c.innerHTML=`
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap">
+      <label class="chk"><input type="radio" name="wps-${containerId}" value="draft" checked> Save as draft</label>
+      <label class="chk"><input type="radio" name="wps-${containerId}" value="publish"> Publish live</label>
+    </div>
+    <div class="brow">
+      <button class="btn btn-p" onclick="doWpPublish('${containerId}')">🚀 Publish to WordPress</button>
+    </div>
+    <div id="${containerId}-msg" style="margin-top:12px"></div>`;
+}
+
+async function doWpPublish(cid){
+  const c=$(cid);
+  const html=c._html, title=c._title;
+  const status=document.querySelector(`input[name="wps-${cid}"]:checked`)?.value||'draft';
+  const msg=$(cid+'-msg');
+  msg.innerHTML='<span class="spin"></span> Publishing...';
+
+  // Fix: use timestamp to bust cache, proper basic auth
+  const endpoint=S.wpUrl+'/wp-json/wp/v2/posts?_='+Date.now();
+  const authStr=btoa(unescape(encodeURIComponent(S.wpUser+':'+S.wpPass)));
+
+  try{
+    const r=await fetch(endpoint,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Basic '+authStr,
+        'Cache-Control':'no-cache',
+      },
+      body:JSON.stringify({title:title,content:html,status:status}),
+      cache:'no-store',
+    });
+    const data=await r.json();
+    if(!r.ok) throw new Error(data.message||`HTTP ${r.status}`);
+    msg.innerHTML=`<div class="alert al-s">✓ Published! <a href="${data.link}" target="_blank" style="color:var(--accent);font-weight:600">View post →</a></div>`;
+  }catch(e){
+    msg.innerHTML=`<div class="alert al-w">✗ Failed: ${e.message}<br><small>Check your WordPress URL, username, and application password in Settings.</small></div>`;
+  }
+}
+
+// ── Download / copy ───────────────────────────────────────────────────────────
+function dlBlog(fmt){
+  const t=S.lastBlogTitle||'blog', h=S.lastBlogHtml; if(!h) return;
+  const fn=t.replace(/[^a-z0-9]/gi,'_').slice(0,50);
+  if(fmt==='html'){
+    dlFile(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${t}</title><style>body{font-family:Georgia,serif;line-height:1.75;max-width:800px;margin:0 auto;padding:24px}img{max-width:100%}a{color:#1a6b3c}</style></head><body>${h}</body></html>`,fn+'.html','text/html');
+  }else{
+    dlFile(h.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(),fn+'.txt','text/plain');
+  }
+}
+function dlRecipe(){
+  const h=S.lastRecipeHtml,n=S.lastRecipeName||'recipe'; if(!h) return;
+  dlFile(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${n}</title><style>body{font-family:Georgia,serif;line-height:1.7;max-width:800px;margin:0 auto;padding:24px}img{max-width:100%}summary{cursor:pointer}details{margin-bottom:8px}</style></head><body>${h}</body></html>`,n.replace(/[^a-z0-9]/gi,'_').slice(0,50)+'.html','text/html');
+}
+function dlFile(content,filename,mime){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type:mime}));
+  a.download=filename; a.click();
+}
+function copyEl(id){
+  const text=$(id).textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn=document.querySelector(`[onclick="copyEl('${id}')"]`);
+    if(btn){btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy',1600);}
+  }).catch(()=>{
+    // fallback
+    const ta=document.createElement('textarea');
+    ta.value=text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  });
+}
+function copyHtml(){
+  const h=S.lastBlogHtml; if(!h){alert('No blog generated yet.');return;}
+  navigator.clipboard.writeText(h).then(()=>{alert('HTML copied to clipboard!');}).catch(()=>{
+    const ta=document.createElement('textarea');
+    ta.value=h; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    alert('HTML copied!');
+  });
+}
+
+// ── Bulk Queue ────────────────────────────────────────────────────────────────
+let queueRunning = false;
+let queueResults = []; // [{title, html, status}]
+
+function initQueuePage(){
+  // Populate niche dropdown
+  const sel=$('q-niche');
+  sel.innerHTML=NICHES.map(n=>`<option value="${n}">${n}</option>`).join('');
+  // Populate domain dropdown
+  const dom=$('q-domain');
+  dom.innerHTML='<option value="">— none —</option>';
+  Object.keys(S.domains).forEach(d=>{
+    const o=document.createElement('option');
+    o.value=d; o.textContent=`${d} (${S.domains[d].length})`;
+    dom.appendChild(o);
+  });
+}
+
+function stopQueue(){ queueRunning=false; }
+
+async function startQueue(){
+  if(!activeAiKey()) return alert('Add an AI key in Settings first.');
+  const raw=$('q-titles').value.trim();
+  if(!raw) return alert('Paste at least one title.');
+  const titles=raw.split('\n').map(t=>t.trim()).filter(Boolean).slice(0,50);
+  if(!titles.length) return alert('No valid titles found.');
+
+  const niche=$('q-niche').value;
+  const domain=$('q-domain').value;
+  const imgSrc=$('q-img').value;
+
+  queueRunning=true;
+  queueResults=[];
+  $('q-start-btn').disabled=true;
+  $('q-stop-btn').style.display='inline-flex';
+  $('q-dl-btn').style.display='none';
+  $('q-progress-wrap').style.display='block';
+  $('q-results').style.display='block';
+  $('q-results-list').innerHTML='';
+
+  // Render empty rows
+  $('q-results-list').innerHTML=titles.map((t,i)=>`
+    <div id="qrow-${i}" style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:9px 0;border-bottom:0.5px solid var(--surface2);font-size:13px">
+      <span>${t}</span>
+      <span id="qstat-${i}" class="bdg bdg-gr">waiting</span>
+      <span id="qdl-${i}"></span>
+    </div>`).join('');
+
+  for(let i=0; i<titles.length; i++){
+    if(!queueRunning) break;
+    const title=titles[i];
+    $(`qstat-${i}`).className='bdg bdg-w';
+    $(`qstat-${i}`).textContent='writing...';
+    $('q-prog-bar').style.width=`${Math.round((i/titles.length)*100)}%`;
+    $('q-prog-lbl').textContent=`${i+1} of ${titles.length} — ${title}`;
+
+    try {
+      // Build link block
+      let linkBlock='';
+      if(domain && S.domains[domain]?.length){
+        linkBlock+='\n\nINTERNAL LINKS — inject inline as <a> tags:\n';
+        S.domains[domain].forEach(l=>linkBlock+=`  <a href="${l.url}">${l.desc}</a>\n`);
+      }
+      if(S.affiliates.length){
+        linkBlock+='\n\nAFFILIATE LINKS — wrap keyword once:\n';
+        S.affiliates.forEach(a=>linkBlock+=`  keyword: "${a.keyword}" → <a href="${a.url}" rel="sponsored">${a.label}</a>\n`);
+      }
+
+      const sysPrompt=getNichePrompt(niche);
+      const userPrompt=`Write a complete SEO-optimised blog post.
+Title: ${title}
+Tone: Friendly
+Target word count: 1500 words
+Number of H2 sections: 5
+${linkBlock}
+Return ONLY valid HTML, no markdown, no code fences.
+Use <h1> title, <p> intro, <h2> sections, <h2>Frequently Asked Questions</h2>, <h2>Conclusion</h2>.
+Do NOT include html/head/body tags.`;
+
+      $(`qstat-${i}`).textContent='generating...';
+      let html = await callAI(sysPrompt, userPrompt, 6000);
+
+      if(imgSrc !== 'none'){
+        $(`qstat-${i}`).textContent='images...';
+        html = await injectImgs(html, imgSrc, title, niche);
+      }
+
+      queueResults.push({title, html, status:'done'});
+      $(`qstat-${i}`).className='bdg bdg-g';
+      $(`qstat-${i}`).textContent='done';
+      // Per-article download
+      $(`qdl-${i}`).innerHTML=`<button class="btn btn-s" style="padding:3px 10px;font-size:12px" onclick="dlQueueItem(${queueResults.length-1})">⬇ HTML</button>`;
+
+    } catch(e){
+      queueResults.push({title, html:'', status:'failed'});
+      $(`qstat-${i}`).className='bdg bdg-w';
+      $(`qstat-${i}`).textContent='failed';
+      console.warn('Queue item failed:', title, e.message);
+    }
+
+    // Small delay between articles to avoid rate limits
+    if(i < titles.length-1) await new Promise(r=>setTimeout(r,1500));
+  }
+
+  $('q-prog-bar').style.width='100%';
+  $('q-prog-lbl').textContent=queueRunning
+    ? `✓ All ${titles.length} articles done`
+    : `Stopped — ${queueResults.filter(r=>r.status==='done').length} completed`;
+  queueRunning=false;
+  $('q-start-btn').disabled=false;
+  $('q-stop-btn').style.display='none';
+  if(queueResults.some(r=>r.status==='done')) $('q-dl-btn').style.display='inline-flex';
+}
+
+function dlQueueItem(idx){
+  const item=queueResults[idx];
+  if(!item?.html) return;
+  const fn=item.title.replace(/[^a-z0-9]/gi,'_').slice(0,60)+'.html';
+  dlFile(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${item.title}</title><style>body{font-family:Georgia,serif;line-height:1.75;max-width:800px;margin:0 auto;padding:24px}img{max-width:100%}a{color:#1a6b3c}</style></head><body>${item.html}</body></html>`,fn,'text/html');
+}
+
+async function downloadQueueZip(){
+  const done=queueResults.filter(r=>r.status==='done');
+  if(!done.length) return alert('No completed articles to download.');
+  // Build a simple multi-file download using data URIs in a helper page
+  const links=done.map(r=>{
+    const fn=r.title.replace(/[^a-z0-9]/gi,'_').slice(0,60)+'.html';
+    const content=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${r.title}</title><style>body{font-family:Georgia,serif;line-height:1.75;max-width:800px;margin:0 auto;padding:24px}img{max-width:100%}a{color:#1a6b3c}</style></head><body>${r.html}</body></html>`;
+    const url=URL.createObjectURL(new Blob([content],{type:'text/html'}));
+    return `<li><a href="${url}" download="${fn}" style="color:#1a6b3c">${r.title}</a></li>`;
+  }).join('');
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Download Articles</title></head><body style="font-family:sans-serif;padding:24px;max-width:600px">
+    <h2>Your ${done.length} articles are ready</h2>
+    <p style="color:#666;margin-bottom:16px">Click each link to download individually:</p>
+    <ul style="line-height:2">${links}</ul>
+    <p style="margin-top:20px;color:#999;font-size:13px">Right-click any link → Save As to choose location</p>
+  </body></html>`);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadS();
+buildNicheGrid();
+buildDietGrid();
+updateAiDot();
+updateDomainDropdown();
+$('g-aff-count').textContent=S.affiliates.length;
+
+// Restore last blog
+if(S.lastBlogHtml){
+  $('g-iframe').srcdoc=blogPreviewDoc(S.lastBlogHtml);
+  $('g-code').textContent=S.lastBlogHtml;
+  $('g-out-title').textContent=S.lastBlogTitle||'Last generated post';
+  renderWPArea('g-wp',S.lastBlogTitle,S.lastBlogHtml);
+  $('g-out').style.display='block';
+}
+
+// Domain dropdown event
+$('g-domain').addEventListener('change',updateDomainCount);
+
+console.log('Blog Engine v2 ready');
+</script>
+</body>
+</html>
