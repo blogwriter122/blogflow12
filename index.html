@@ -578,6 +578,17 @@ hr{border:none;border-top:1.5px solid var(--border);margin:24px 0}
         <div><label class="lbl">Stability AI key <a href="https://platform.stability.ai" target="_blank" style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0">(SD)</a></label><input type="password" id="s-stability-key" placeholder="Stability key"></div>
         <div><label class="lbl">Replicate API token <a href="https://replicate.com/account/api-tokens" target="_blank" style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0">(get token)</a></label><input type="password" id="s-replicate-key" placeholder="r8_..."></div>
         <div><label class="lbl">Replicate model <span style="font-weight:400;text-transform:none;letter-spacing:0">(owner/model or owner/model:version)</span></label><input type="text" id="s-replicate-model" placeholder="prunaai/z-image-turbo"></div>
+        <div>
+          <label class="lbl">Resolution <span style="font-weight:400;text-transform:none;letter-spacing:0">— affects price per image</span></label>
+          <select id="s-replicate-res">
+            <option value="512x512">512 × 512 — cheapest (~$0.003)</option>
+            <option value="768x768">768 × 768 — balanced (~$0.006)</option>
+            <option value="1024x1024" selected>1024 × 1024 — standard (~$0.010)</option>
+            <option value="1280x720">1280 × 720 — landscape HD</option>
+            <option value="1344x768">1344 × 768 — wide blog hero</option>
+            <option value="1536x1024">1536 × 1024 — large (~$0.018)</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -619,7 +630,7 @@ let S = {
   aiProvider:'claude', aiModel:'',
   claudeKey:'', openaiKey:'', grokKey:'', geminiKey:'', mistralKey:'',
   pexelsKey:'', unsplashKey:'',
-  dalleKey:'', ideogramKey:'', togetherKey:'', stabilityKey:'', replicateKey:'', replicateModel:'prunaai/z-image-turbo',
+  dalleKey:'', ideogramKey:'', togetherKey:'', stabilityKey:'', replicateKey:'', replicateModel:'prunaai/z-image-turbo', replicateRes:'1024x1024',
   wpUrl:'', wpUser:'', wpPass:'',
   domains:{},        // { "yourblog.com": [{url,desc},...] }
   affiliates:[],     // [{keyword,url,label}]
@@ -707,6 +718,7 @@ function loadSettingsUI(){
   $('s-stability-key').value=S.stabilityKey;
   $('s-replicate-key').value  = S.replicateKey;
   $('s-replicate-model').value= S.replicateModel||'prunaai/z-image-turbo';
+  $('s-replicate-res').value  = S.replicateRes||'1024x1024';
   $('s-wp-url').value      = S.wpUrl;
   $('s-wp-user').value     = S.wpUser;
   $('s-wp-pass').value     = S.wpPass;
@@ -728,6 +740,7 @@ function saveSettings(){
   S.stabilityKey= $('s-stability-key').value.trim();
   S.replicateKey  = $('s-replicate-key').value.trim();
   S.replicateModel= $('s-replicate-model').value.trim()||'prunaai/z-image-turbo';
+  S.replicateRes  = $('s-replicate-res').value||'1024x1024';
   S.wpUrl       = $('s-wp-url').value.trim().replace(/\/+$/,'');
   S.wpUser      = $('s-wp-user').value.trim();
   S.wpPass      = $('s-wp-pass').value.trim();
@@ -858,42 +871,34 @@ async function genAiImage(prompt, source){
 
   if(source==='replicate'){
     if(!S.replicateKey) return null;
-    const model=S.replicateModel||'prunaai/z-image-turbo';
-    // Split owner/model:version if version hash provided
-    const hasVersion=model.includes(':');
-    const endpoint=hasVersion
-      ? 'https://api.replicate.com/v1/predictions'
-      : `https://api.replicate.com/v1/models/${model}/predictions`;
-    const body=hasVersion
-      ? {version:model.split(':')[1],input:{prompt:fullPrompt,width:1344,height:768}}
-      : {input:{prompt:fullPrompt,width:1344,height:768}};
-    // Create prediction
-    const r=await fetch(endpoint,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.replicateKey,'Prefer':'wait=30'},
-      body:JSON.stringify(body)
-    });
-    if(!r.ok) return null;
-    const pred=await r.json();
-    // If status is already succeeded (Prefer:wait worked)
-    if(pred.status==='succeeded'){
-      const imgUrl=Array.isArray(pred.output)?pred.output[0]:pred.output;
-      return imgUrl?{url:imgUrl,alt:prompt,credit:`Image by Replicate (${model.split('/')[1]||model})`}:null;
-    }
-    // Otherwise poll
-    const pollUrl=pred.urls?.get;
-    if(!pollUrl) return null;
-    for(let i=0;i<20;i++){
-      await new Promise(res=>setTimeout(res,2000));
-      const pr=await fetch(pollUrl,{headers:{'Authorization':'Bearer '+S.replicateKey}});
-      if(!pr.ok) return null;
-      const pd=await pr.json();
-      if(pd.status==='succeeded'){
-        const imgUrl=Array.isArray(pd.output)?pd.output[0]:pd.output;
-        return imgUrl?{url:imgUrl,alt:prompt,credit:`Image by Replicate (${model.split('/')[1]||model})`}:null;
+    const model = S.replicateModel || 'prunaai/z-image-turbo';
+    const res   = S.replicateRes  || '1024x1024';
+    const [rw, rh] = res.split('x').map(Number);
+
+    // All Replicate calls go through our /api/replicate proxy to avoid CORS
+    try {
+      const r = await fetch('/api/replicate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: S.replicateKey,
+          model: model,
+          input: {
+            prompt: fullPrompt,
+            width:  rw,
+            height: rh,
+            num_inference_steps: 4,
+            guidance_scale: 0,
+          }
+        })
+      });
+      if (!r.ok) return null;
+      const data = await r.json();
+      if (data.status === 'succeeded') {
+        const imgUrl = Array.isArray(data.output) ? data.output[0] : data.output;
+        return imgUrl ? { url: imgUrl, alt: prompt, credit: `Image by Replicate · ${model.split('/').pop()}` } : null;
       }
-      if(pd.status==='failed'||pd.status==='canceled') return null;
-    }
+    } catch(e) { console.warn('Replicate error:', e); }
     return null;
   }
 
