@@ -579,14 +579,13 @@ hr{border:none;border-top:1.5px solid var(--border);margin:24px 0}
         <div><label class="lbl">Replicate API token <a href="https://replicate.com/account/api-tokens" target="_blank" style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0">(get token)</a></label><input type="password" id="s-replicate-key" placeholder="r8_..."></div>
         <div><label class="lbl">Replicate model <span style="font-weight:400;text-transform:none;letter-spacing:0">(owner/model or owner/model:version)</span></label><input type="text" id="s-replicate-model" placeholder="prunaai/z-image-turbo"></div>
         <div>
-          <label class="lbl">Resolution <span style="font-weight:400;text-transform:none;letter-spacing:0">— affects price per image</span></label>
+          <label class="lbl">Output height <span style="font-weight:400;text-transform:none;letter-spacing:0">— width auto by model · affects price</span></label>
           <select id="s-replicate-res">
-            <option value="512x512">512 × 512 — cheapest (~$0.003)</option>
-            <option value="768x768">768 × 768 — balanced (~$0.006)</option>
-            <option value="1024x1024" selected>1024 × 1024 — standard (~$0.010)</option>
-            <option value="1280x720">1280 × 720 — landscape HD</option>
-            <option value="1344x768">1344 × 768 — wide blog hero</option>
-            <option value="1536x1024">1536 × 1024 — large (~$0.018)</option>
+            <option value="512x512">512 px — cheapest / fastest</option>
+            <option value="768x768">768 px — balanced</option>
+            <option value="1024x1024" selected>1024 px — standard (~$0.01)</option>
+            <option value="1280x1280">1280 px — high quality</option>
+            <option value="1536x1536">1536 px — largest / slowest</option>
           </select>
         </div>
       </div>
@@ -873,9 +872,8 @@ async function genAiImage(prompt, source){
     if(!S.replicateKey) return null;
     const model = S.replicateModel || 'prunaai/z-image-turbo';
     const res   = S.replicateRes  || '1024x1024';
-    const [rw, rh] = res.split('x').map(Number);
+    const height = parseInt(res.split('x')[1]) || 1024;
 
-    // All Replicate calls go through our /api/replicate proxy to avoid CORS
     try {
       const r = await fetch('/api/replicate', {
         method: 'POST',
@@ -885,20 +883,24 @@ async function genAiImage(prompt, source){
           model: model,
           input: {
             prompt: fullPrompt,
-            width:  rw,
-            height: rh,
-            num_inference_steps: 4,
-            guidance_scale: 0,
+            height: height,
           }
         })
       });
-      if (!r.ok) return null;
+      if (!r.ok) {
+        const err = await r.json().catch(()=>({}));
+        console.warn('Replicate proxy error:', err);
+        return null;
+      }
       const data = await r.json();
       if (data.status === 'succeeded') {
         const imgUrl = Array.isArray(data.output) ? data.output[0] : data.output;
         return imgUrl ? { url: imgUrl, alt: prompt, credit: `Image by Replicate · ${model.split('/').pop()}` } : null;
       }
-    } catch(e) { console.warn('Replicate error:', e); }
+      console.warn('Replicate failed:', data.error || data.status);
+    } catch(e) {
+      console.warn('Replicate fetch error:', e.message);
+    }
     return null;
   }
 
